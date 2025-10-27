@@ -33,10 +33,34 @@
                         <label class="form-label">Description</label>
                         {{ form.description }}
                     </div>
+                    <hr>
+                    <h5 class="mb-3"><i class="bi bi-gear"></i> Part Information</h5>
                     <div class="mb-3">
-                        <label class="form-label">Parts Replaced</label>
-                        {{ form.parts_replaced }}
+                        <label class="form-label">Part Replaced</label>
+                        {{ form.repairing_part }}
+                        <small class="form-text text-muted">Select a part from the list below</small>
                     </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Quantity</label>
+                            {{ form.part_quantity }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Unit of Measurement</label>
+                            {{ form.part_unit }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Additional Info</label>
+                        {{ form.part_additional_info }}
+                        <small class="form-text text-muted">Add any additional information about the part</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Disposal Type</label>
+                        {{ form.disposal_type }}
+                        <small class="form-text text-muted">Select how the replaced part is being disposed</small>
+                    </div>
+                    <hr>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Cost</label>
@@ -56,57 +80,6 @@
                         <label class="form-label">Technician</label>
                         {{ form.technician }}
                     </div>
-                    <hr>
-                    <h5 class="mb-3">Parts Disposal Information</h5>
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Parts Disposal Type</label>
-                            {{ form.disposal_type }}
-                            <small class="form-text text-muted">Select how the replaced parts are being disposed</small>
-                        </div>
-                        
-                        <!-- Inline Waste Material Form - Shown when disposal type is waste or trade_in -->
-                        <div class="col-md-12 mb-3" id="inlineWasteForm" style="display: none;">
-                            <div class="card border-primary">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Waste Material Details</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-12 mb-3">
-                                            <label class="form-label">Material Name <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" name="waste_material_name" id="id_waste_material_name" required>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
-                                            <input type="number" class="form-control" name="waste_quantity" id="id_waste_quantity" step="0.01" required>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Unit <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" name="waste_unit" id="id_waste_unit" value="pcs" required>
-                                            <small class="form-text text-muted">e.g., kg, pcs, liters</small>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Condition/State</label>
-                                            <input type="text" class="form-control" name="waste_condition" id="id_waste_condition" placeholder="e.g., Damaged, Used, etc.">
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Estimated Value (₱)</label>
-                                            <input type="number" class="form-control" name="waste_estimated_value" id="id_waste_estimated_value" step="0.01" placeholder="0.00">
-                                        </div>
-                                        <div class="col-md-12 mb-3">
-                                            <label class="form-label">Disposal Location/Shop</label>
-                                            <input type="text" class="form-control" name="waste_disposal_location" id="id_waste_disposal_location">
-                                        </div>
-                                        <div class="col-md-12 mb-3">
-                                            <label class="form-label">Notes</label>
-                                            <textarea class="form-control" name="waste_notes" id="id_waste_notes" rows="2"></textarea>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <a href="{% url 'repair_list' %}" class="btn btn-secondary">Cancel</a>
                         <button type="submit" class="btn btn-primary">Save</button>
@@ -116,29 +89,4 @@
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const disposalTypeSelect = document.querySelector('#id_disposal_type');
-    const inlineWasteForm = document.getElementById('inlineWasteForm');
-    
-    // Function to toggle inline form visibility
-    function toggleInlineForm() {
-        const selectedValue = disposalTypeSelect.value;
-        if (selectedValue === 'waste' || selectedValue === 'trade_in') {
-            inlineWasteForm.style.display = 'block';
-        } else {
-            inlineWasteForm.style.display = 'none';
-        }
-    }
-    
-    // Initial check
-    toggleInlineForm();
-    
-    // Add event listener
-    if (disposalTypeSelect) {
-        disposalTypeSelect.addEventListener('change', toggleInlineForm);
-    }
-});
-</script>
 {% endblock %}

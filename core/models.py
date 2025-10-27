@@ -162,11 +162,35 @@ class RepairShop(models.Model):
         ordering = ['name']
 
 
+class RepairPart(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Repair Part'
+        verbose_name_plural = 'Repair Parts'
+
+
 class Repair(models.Model):
     STATUS_CHOICES = [
         ('Completed', 'Completed'),
         ('Ongoing', 'Ongoing'),
     ]
+    
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='repairs')
+    date_of_repair = models.DateField()
+    description = models.TextField()
+    repairing_part = models.ForeignKey(RepairPart, on_delete=models.SET_NULL, null=True, blank=True, related_name='repairs')
+    part_additional_info = models.TextField(blank=True, verbose_name='Additional Info')
+    part_quantity = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)], verbose_name='Quantity')
+    part_unit = models.CharField(max_length=50, blank=True, verbose_name='Unit of Measurement')
     
     DISPOSAL_CHOICES = [
         ('normal', 'Normal Disposal'),
@@ -174,19 +198,11 @@ class Repair(models.Model):
         ('waste', 'Waste Material'),
     ]
     
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='repairs')
-    date_of_repair = models.DateField()
-    description = models.TextField()
-    parts_replaced = models.TextField(blank=True)
+    disposal_type = models.CharField(max_length=20, choices=DISPOSAL_CHOICES, default='normal', verbose_name='Disposal Type')
     cost = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     repair_shop = models.ForeignKey(RepairShop, on_delete=models.SET_NULL, null=True, blank=True)
     technician = models.CharField(max_length=200, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ongoing')
-    disposal_type = models.CharField(max_length=20, choices=DISPOSAL_CHOICES, default='normal', verbose_name='Parts Disposal')
-    # Additional fields for storing waste material details when disposed
-    waste_material_name = models.CharField(max_length=200, blank=True, verbose_name='Material Name')
-    waste_quantity = models.CharField(max_length=50, blank=True, verbose_name='Quantity')
-    waste_condition = models.CharField(max_length=200, blank=True, verbose_name='Condition/State')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

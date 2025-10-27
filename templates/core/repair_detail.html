@@ -88,9 +88,40 @@
                             <h6><i class="bi bi-file-text me-2"></i>Description</h6>
                             <p class="mb-4">{{ repair.description|linebreaks }}</p>
                             
-                            {% if repair.parts_replaced %}
-                            <h6><i class="bi bi-gear me-2"></i>Parts Replaced</h6>
-                            <p class="mb-4">{{ repair.parts_replaced|linebreaks }}</p>
+                            {% if repair.repairing_part %}
+                            <h6><i class="bi bi-gear me-2"></i>Part Replaced</h6>
+                            <p class="mb-2">
+                                <span class="badge bg-secondary fs-6">{{ repair.repairing_part.name }}</span>
+                            </p>
+                            
+                            {% if repair.part_quantity or repair.part_unit %}
+                            <div class="row mt-2 mb-2">
+                                {% if repair.part_quantity %}
+                                <div class="col-6">
+                                    <strong>Quantity:</strong> {{ repair.part_quantity }}
+                                </div>
+                                {% endif %}
+                                {% if repair.part_unit %}
+                                <div class="col-6">
+                                    <strong>Unit:</strong> {{ repair.part_unit }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if repair.part_additional_info %}
+                            <div class="mb-2">
+                                <strong>Additional Info:</strong><br>
+                                <p class="text-muted">{{ repair.part_additional_info|linebreaks }}</p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if repair.disposal_type %}
+                            <div class="mb-2">
+                                <strong>Disposal Type:</strong> 
+                                <span class="badge bg-info">{{ repair.get_disposal_type_display }}</span>
+                            </div>
+                            {% endif %}
                             {% endif %}
                         </div>
                     </div>

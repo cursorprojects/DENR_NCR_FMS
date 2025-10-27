@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from .models import Vehicle, Repair, Driver, Department, RepairShop
+from .models import Vehicle, Repair, Driver, Department, RepairShop, RepairPart
 
 User = get_user_model()
 
@@ -36,26 +36,48 @@ class VehicleForm(forms.ModelForm):
 
 
 class RepairForm(forms.ModelForm):
+    UNIT_CHOICES = [
+        ('', 'Select unit...'),
+        ('pcs', 'Pieces (pcs)'),
+        ('set', 'Set'),
+        ('pair', 'Pair'),
+        ('liter', 'Liter'),
+        ('gallon', 'Gallon'),
+        ('kg', 'Kilogram (kg)'),
+        ('g', 'Gram (g)'),
+        ('m', 'Meter (m)'),
+        ('cm', 'Centimeter (cm)'),
+        ('mm', 'Millimeter (mm)'),
+        ('sq m', 'Square Meter'),
+        ('cu m', 'Cubic Meter'),
+        ('box', 'Box'),
+        ('bottle', 'Bottle'),
+        ('can', 'Can'),
+        ('sheet', 'Sheet'),
+        ('roll', 'Roll'),
+    ]
+    
+    part_unit = forms.ChoiceField(choices=UNIT_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
+    
     class Meta:
         model = Repair
         fields = [
-            'vehicle', 'date_of_repair', 'description', 'parts_replaced',
-            'cost', 'repair_shop', 'technician', 'status', 'disposal_type',
-            'waste_material_name', 'waste_quantity', 'waste_condition'
+            'vehicle', 'date_of_repair', 'description', 'repairing_part',
+            'part_additional_info', 'part_quantity', 'part_unit', 'disposal_type',
+            'cost', 'repair_shop', 'technician', 'status'
         ]
         widgets = {
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
             'date_of_repair': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'parts_replaced': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'repairing_part': forms.Select(attrs={'class': 'form-control'}),
+            'part_additional_info': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'part_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'disposal_type': forms.Select(attrs={'class': 'form-control'}),
             'cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'repair_shop': forms.Select(attrs={'class': 'form-control'}),
             'technician': forms.TextInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
-            'disposal_type': forms.Select(attrs={'class': 'form-control'}),
-            'waste_material_name': forms.HiddenInput(attrs={'id': 'form_waste_material_name'}),
-            'waste_quantity': forms.HiddenInput(attrs={'id': 'form_waste_quantity'}),
-            'waste_condition': forms.HiddenInput(attrs={'id': 'form_waste_condition'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -63,6 +85,14 @@ class RepairForm(forms.ModelForm):
         # Only show active repair shops in the dropdown
         self.fields['repair_shop'].queryset = RepairShop.objects.filter(is_active=True)
         self.fields['repair_shop'].empty_label = "Select a repair shop..."
+        # Only show active repair parts in the dropdown
+        self.fields['repairing_part'].queryset = RepairPart.objects.filter(is_active=True)
+        self.fields['repairing_part'].empty_label = "Select a part..."
+        self.fields['repairing_part'].label = "Part Replaced"
+        
+        # If editing, populate the unit field
+        if self.instance and self.instance.pk:
+            self.fields['part_unit'].initial = self.instance.part_unit
 
 
 class DriverForm(forms.ModelForm):

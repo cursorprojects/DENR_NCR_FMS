@@ -60,7 +60,16 @@
                         <td><strong>{{ repair.vehicle.plate_number }}</strong></td>
                         <td>{{ repair.date_of_repair }}</td>
                         <td>{{ repair.description|truncatewords:10 }}</td>
-                        <td>{{ repair.parts_replaced|truncatewords:5|default:"-" }}</td>
+                        <td>
+                            {% if repair.repairing_part %}
+                                <span class="badge bg-secondary">{{ repair.repairing_part.name }}</span>
+                                {% if repair.part_quantity %}
+                                    <br><small class="text-muted">{{ repair.part_quantity }} {{ repair.part_unit|default:'' }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                         <td>{{ repair.cost|currency }}</td>
                         <td>
                             {% if repair.repair_shop %}
