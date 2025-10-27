@@ -379,7 +379,7 @@ def user_list(request):
         'search_query': search_query,
     }
     
-    return render(request, 'core/user_list.html', context)
+    return render(request, 'core/cms/user_list.html', context)
 
 
 @login_required
@@ -410,7 +410,7 @@ def user_create(request):
     else:
         form = UserForm()
     
-    return render(request, 'core/user_form.html', {'form': form, 'title': 'Add User'})
+    return render(request, 'core/cms/user_form.html', {'form': form, 'title': 'Add User'})
 
 
 @login_required
@@ -441,7 +441,7 @@ def user_edit(request, pk):
     else:
         form = UserForm(instance=user)
     
-    return render(request, 'core/user_form.html', {'form': form, 'title': 'Edit User'})
+    return render(request, 'core/cms/user_form.html', {'form': form, 'title': 'Edit User'})
 
 
 @login_required
@@ -467,7 +467,7 @@ def user_delete(request, pk):
         messages.success(request, 'User deleted successfully!')
         return redirect('user_list')
     
-    return render(request, 'core/user_delete.html', {'user_obj': user})
+    return render(request, 'core/cms/user_delete.html', {'user_obj': user})
 
 
 @login_required
@@ -482,7 +482,7 @@ def activity_logs(request):
         'logs': logs,
     }
     
-    return render(request, 'core/activity_logs.html', context)
+    return render(request, 'core/cms/activity_logs.html', context)
 
 
 @login_required
@@ -542,7 +542,7 @@ def admin_dashboard(request):
         'active_repair_shops': active_repair_shops,
     }
     
-    return render(request, 'core/admin_dashboard.html', context)
+    return render(request, 'core/cms/admin_dashboard.html', context)
 
 
 # Department Management Views
@@ -567,7 +567,7 @@ def department_list(request):
         'search_query': search_query,
     }
     
-    return render(request, 'core/department_list.html', context)
+    return render(request, 'core/cms/department_list.html', context)
 
 
 @login_required
@@ -596,7 +596,7 @@ def department_create(request):
     else:
         form = DepartmentForm()
     
-    return render(request, 'core/department_form.html', {'form': form, 'title': 'Add Department'})
+    return render(request, 'core/cms/department_form.html', {'form': form, 'title': 'Add Department'})
 
 
 @login_required
@@ -627,7 +627,7 @@ def department_edit(request, pk):
     else:
         form = DepartmentForm(instance=department)
     
-    return render(request, 'core/department_form.html', {'form': form, 'title': 'Edit Department'})
+    return render(request, 'core/cms/department_form.html', {'form': form, 'title': 'Edit Department'})
 
 
 @login_required
@@ -653,7 +653,7 @@ def department_delete(request, pk):
         messages.success(request, 'Department deleted successfully!')
         return redirect('department_list')
     
-    return render(request, 'core/department_delete.html', {'department': department})
+    return render(request, 'core/cms/department_delete.html', {'department': department})
 
 
 # Driver Management Views
@@ -680,7 +680,7 @@ def driver_list(request):
         'search_query': search_query,
     }
     
-    return render(request, 'core/driver_list.html', context)
+    return render(request, 'core/cms/driver_list.html', context)
 
 
 @login_required
@@ -709,7 +709,7 @@ def driver_create(request):
     else:
         form = DriverForm()
     
-    return render(request, 'core/driver_form.html', {'form': form, 'title': 'Add Driver'})
+    return render(request, 'core/cms/driver_form.html', {'form': form, 'title': 'Add Driver'})
 
 
 @login_required
@@ -740,7 +740,7 @@ def driver_edit(request, pk):
     else:
         form = DriverForm(instance=driver)
     
-    return render(request, 'core/driver_form.html', {'form': form, 'title': 'Edit Driver'})
+    return render(request, 'core/cms/driver_form.html', {'form': form, 'title': 'Edit Driver'})
 
 
 @login_required
@@ -766,7 +766,7 @@ def driver_delete(request, pk):
         messages.success(request, 'Driver deleted successfully!')
         return redirect('driver_list')
     
-    return render(request, 'core/driver_delete.html', {'driver': driver})
+    return render(request, 'core/cms/driver_delete.html', {'driver': driver})
 
 
 # Repair Shop Management Views
@@ -800,7 +800,7 @@ def repairshop_list(request):
         'status_filter': status_filter,
     }
     
-    return render(request, 'core/repairshop_list.html', context)
+    return render(request, 'core/cms/repairshop_list.html', context)
 
 
 @login_required
@@ -829,7 +829,7 @@ def repairshop_create(request):
     else:
         form = RepairShopForm()
     
-    return render(request, 'core/repairshop_form.html', {'form': form, 'title': 'Add Repair Shop'})
+    return render(request, 'core/cms/repairshop_form.html', {'form': form, 'title': 'Add Repair Shop'})
 
 
 @login_required
@@ -860,7 +860,7 @@ def repairshop_edit(request, pk):
     else:
         form = RepairShopForm(instance=repair_shop)
     
-    return render(request, 'core/repairshop_form.html', {'form': form, 'title': 'Edit Repair Shop'})
+    return render(request, 'core/cms/repairshop_form.html', {'form': form, 'title': 'Edit Repair Shop'})
 
 
 @login_required
@@ -886,4 +886,4 @@ def repairshop_delete(request, pk):
         messages.success(request, 'Repair shop deleted successfully!')
         return redirect('repairshop_list')
     
-    return render(request, 'core/repairshop_delete.html', {'repair_shop': repair_shop})
+    return render(request, 'core/cms/repairshop_delete.html', {'repair_shop': repair_shop})
