@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}Admin Dashboard - Fleet Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="bi bi-gear me-2"></i>Admin Dashboard</h2>
+            <p class="text-muted">Comprehensive system management and monitoring</p>
+        </div>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Total Users</h6>
+                            <h2 class="mb-0">{{ total_users }}</h2>
+                        </div>
+                        <i class="bi bi-people" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Active Users</h6>
+                            <h2 class="mb-0">{{ active_users }}</h2>
+                        </div>
+                        <i class="bi bi-person-check" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Total Vehicles</h6>
+                            <h2 class="mb-0">{{ total_vehicles }}</h2>
+                        </div>
+                        <i class="bi bi-truck" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Total Repairs</h6>
+                            <h2 class="mb-0">{{ total_repairs }}</h2>
+                        </div>
+                        <i class="bi bi-tools" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Management Sections -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4><i class="bi bi-grid me-2"></i>System Management</h4>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- User Management -->
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-people text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">User Management</h5>
+                    <p class="card-text text-muted">Manage system users, roles, and permissions</p>
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <small class="text-muted">Super Admins</small>
+                            <div class="fw-bold">{{ super_admins }}</div>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Fleet Managers</small>
+                            <div class="fw-bold">{{ fleet_managers }}</div>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Encoders</small>
+                            <div class="fw-bold">{{ encoders }}</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'user_list' %}" class="btn btn-primary">
+                        <i class="bi bi-gear me-2"></i>Manage Users
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Management -->
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-truck text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">Vehicle Management</h5>
+                    <p class="card-text text-muted">Manage fleet vehicles, assignments, and maintenance</p>
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <small class="text-muted">Serviceable</small>
+                            <div class="fw-bold text-success">{{ operational_vehicles }}</div>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Under Repair</small>
+                            <div class="fw-bold text-warning">{{ under_repair_vehicles }}</div>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Unserviceable</small>
+                            <div class="fw-bold text-secondary">{{ unserviceable_vehicles }}</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'vehicle_list' %}" class="btn btn-success">
+                        <i class="bi bi-gear me-2"></i>Manage Vehicles
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Repair Management -->
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-tools text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">Repair Management</h5>
+                    <p class="card-text text-muted">Track repairs, maintenance, and costs</p>
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Completed</small>
+                            <div class="fw-bold text-success">{{ completed_repairs }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Ongoing</small>
+                            <div class="fw-bold text-warning">{{ ongoing_repairs }}</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'repair_list' %}" class="btn btn-warning">
+                        <i class="bi bi-gear me-2"></i>Manage Repairs
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Department Management -->
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-building text-info" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">Department Management</h5>
+                    <p class="card-text text-muted">Manage organizational departments and assignments</p>
+                    <div class="mb-3">
+                        <small class="text-muted">Total Departments</small>
+                        <div class="fw-bold">{{ total_departments|default:"0" }}</div>
+                    </div>
+                    <a href="{% url 'department_list' %}" class="btn btn-info">
+                        <i class="bi bi-gear me-2"></i>Manage Departments
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Driver Management -->
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-person-badge text-secondary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">Driver Management</h5>
+                    <p class="card-text text-muted">Manage drivers, licenses, and assignments</p>
+                    <div class="mb-3">
+                        <small class="text-muted">Total Drivers</small>
+                        <div class="fw-bold">{{ total_drivers|default:"0" }}</div>
+                    </div>
+                    <a href="{% url 'driver_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-gear me-2"></i>Manage Drivers
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Repair Shop Management -->
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-tools text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">Repair Shop Management</h5>
+                    <p class="card-text text-muted">Manage repair shops and service providers</p>
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Total Shops</small>
+                            <div class="fw-bold">{{ total_repair_shops }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Active</small>
+                            <div class="fw-bold text-success">{{ active_repair_shops }}</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'repairshop_list' %}" class="btn btn-primary">
+                        <i class="bi bi-gear me-2"></i>Manage Repair Shops
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Logs -->
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-clock-history text-dark" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">Activity Logs</h5>
+                    <p class="card-text text-muted">Monitor system activity and user actions</p>
+                    <div class="mb-3">
+                        <small class="text-muted">Recent Activities</small>
+                        <div class="fw-bold">{{ recent_logs|length }}</div>
+                    </div>
+                    <a href="{% url 'activity_logs' %}" class="btn btn-dark">
+                        <i class="bi bi-eye me-2"></i>View Logs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history me-2"></i>Recent System Activity
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_logs %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ log.timestamp|date:"M d, Y H:i" }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                {{ log.user.first_name|first|upper }}{{ log.user.last_name|first|upper }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ log.user.get_full_name }}</div>
+                                                <small class="text-muted">{{ log.user.username }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if log.action == 'create' %}bg-success
+                                            {% elif log.action == 'update' %}bg-warning
+                                            {% elif log.action == 'delete' %}bg-danger
+                                            {% elif log.action == 'login' %}bg-info
+                                            {% elif log.action == 'logout' %}bg-secondary
+                                            {% else %}bg-light text-dark{% endif %}">
+                                            {{ log.get_action_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ log.description }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        <i class="bi bi-clock-history fa-3x mb-3"></i>
+                                        <p>No recent activity</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

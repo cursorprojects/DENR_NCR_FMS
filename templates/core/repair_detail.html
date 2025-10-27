@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}Repair Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-wrench me-2"></i>Repair Details</h2>
+                <div>
+                    <a href="{% url 'repair_edit' repair.pk %}" class="btn btn-primary me-2">
+                        <i class="bi bi-pencil me-2"></i>Edit Repair
+                    </a>
+                    <a href="{% url 'repair_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Repairs
+                    </a>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Repair Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-car-front me-2"></i>Vehicle</h6>
+                                    <p class="mb-3">
+                                        <strong>{{ repair.vehicle.plate_number }}</strong><br>
+                                        <small class="text-muted">{{ repair.vehicle.make }} {{ repair.vehicle.model }} {{ repair.vehicle.year }}</small>
+                                    </p>
+                                    
+                                    <h6><i class="bi bi-calendar me-2"></i>Date of Repair</h6>
+                                    <p class="mb-3">{{ repair.date_of_repair }}</p>
+                                    
+                                    <h6><i class="bi bi-currency-peso me-2"></i>Cost</h6>
+                                    <p class="mb-3">
+                                        <span class="h5 text-primary">{{ repair.cost|currency }}</span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-tools me-2"></i>Repair Shop</h6>
+                                    {% if repair.repair_shop %}
+                                        <p class="mb-3">
+                                            <strong>{{ repair.repair_shop.name }}</strong><br>
+                                            {% if repair.repair_shop.address %}
+                                                <small class="text-muted">
+                                                    <i class="bi bi-geo-alt me-1"></i>{{ repair.repair_shop.address }}
+                                                </small><br>
+                                            {% endif %}
+                                            {% if repair.repair_shop.phone %}
+                                                <small class="text-muted">
+                                                    <i class="bi bi-phone me-1"></i>{{ repair.repair_shop.phone }}
+                                                </small>
+                                            {% endif %}
+                                        </p>
+                                    {% else %}
+                                        <p class="mb-3 text-muted">No repair shop assigned</p>
+                                    {% endif %}
+                                    
+                                    <h6><i class="bi bi-person me-2"></i>Technician</h6>
+                                    <p class="mb-3">
+                                        {% if repair.technician %}
+                                            {{ repair.technician }}
+                                        {% else %}
+                                            <span class="text-muted">Not specified</span>
+                                        {% endif %}
+                                    </p>
+                                    
+                                    <h6><i class="bi bi-flag me-2"></i>Status</h6>
+                                    <p class="mb-3">
+                                        {% if repair.status == 'Completed' %}
+                                            <span class="badge bg-success fs-6">Completed</span>
+                                        {% else %}
+                                            <span class="badge bg-warning fs-6">Ongoing</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6><i class="bi bi-file-text me-2"></i>Description</h6>
+                            <p class="mb-4">{{ repair.description|linebreaks }}</p>
+                            
+                            {% if repair.parts_replaced %}
+                            <h6><i class="bi bi-gear me-2"></i>Parts Replaced</h6>
+                            <p class="mb-4">{{ repair.parts_replaced|linebreaks }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Repair Shop Details</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if repair.repair_shop %}
+                                <div class="text-center mb-3">
+                                    <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2">
+                                        {{ repair.repair_shop.name|first|upper }}
+                                    </div>
+                                    <h6 class="mb-1">{{ repair.repair_shop.name }}</h6>
+                                    {% if repair.repair_shop.contact_person %}
+                                        <small class="text-muted">Contact: {{ repair.repair_shop.contact_person }}</small>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if repair.repair_shop.address %}
+                                <div class="mb-3">
+                                    <h6><i class="bi bi-geo-alt me-2"></i>Address</h6>
+                                    <p class="small">{{ repair.repair_shop.address }}</p>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="row">
+                                    {% if repair.repair_shop.phone %}
+                                    <div class="col-12 mb-2">
+                                        <h6><i class="bi bi-phone me-2"></i>Phone</h6>
+                                        <p class="small mb-0">{{ repair.repair_shop.phone }}</p>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if repair.repair_shop.email %}
+                                    <div class="col-12 mb-2">
+                                        <h6><i class="bi bi-envelope me-2"></i>Email</h6>
+                                        <p class="small mb-0">{{ repair.repair_shop.email }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <span class="badge {% if repair.repair_shop.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {% if repair.repair_shop.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            {% else %}
+                                <div class="text-center text-muted">
+                                    <i class="bi bi-tools fa-3x mb-3"></i>
+                                    <p>No repair shop assigned to this repair</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">Timeline</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-primary"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-1">Repair Created</h6>
+                                        <small class="text-muted">{{ repair.created_at|date:"M d, Y H:i" }}</small>
+                                    </div>
+                                </div>
+                                
+                                {% if repair.updated_at != repair.created_at %}
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-info"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-1">Last Updated</h6>
+                                        <small class="text-muted">{{ repair.updated_at|date:"M d, Y H:i" }}</small>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if repair.status == 'Completed' %}
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-success"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-1">Repair Completed</h6>
+                                        <small class="text-muted">{{ repair.date_of_repair|date:"M d, Y" }}</small>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-lg {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -22px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #e9ecef;
+}
+
+.timeline-content h6 {
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}
+    

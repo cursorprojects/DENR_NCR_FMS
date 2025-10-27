@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}{{ vehicle.plate_number }} - Fleet Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="bi bi-car-front"></i> {{ vehicle.plate_number }}</h2>
+            <div>
+                <a href="{% url 'vehicle_edit' vehicle.pk %}" class="btn btn-warning">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                <a href="{% url 'vehicle_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        {% if vehicle.photo %}
+        <img src="{{ vehicle.photo.url }}" class="img-fluid rounded" alt="Vehicle Photo">
+        {% else %}
+        <div class="bg-light p-5 text-center rounded">
+            <i class="bi bi-car-front" style="font-size: 5rem;"></i>
+            <p class="mt-3">No photo available</p>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Vehicle Information</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <strong>Brand:</strong> {{ vehicle.brand }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Model:</strong> {{ vehicle.model }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Year:</strong> {{ vehicle.year }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Type:</strong> {{ vehicle.vehicle_type }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Status:</strong>
+                        {% if vehicle.status == 'Serviceable' %}
+                            <span class="badge bg-success">Serviceable</span>
+                        {% elif vehicle.status == 'Under Repair' %}
+                            <span class="badge bg-warning text-dark">Under Repair</span>
+                        {% elif vehicle.status == 'Unserviceable' %}
+                            <span class="badge bg-secondary">Unserviceable</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Department:</strong> {{ vehicle.department|default:"-" }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Assigned Driver:</strong> {{ vehicle.assigned_driver|default:"-" }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Date Acquired:</strong> {{ vehicle.date_acquired }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Current Mileage:</strong> {{ vehicle.current_mileage }} km
+                    </div>
+                    {% if vehicle.registration_document %}
+                    <div class="col-md-6 mb-2">
+                        <strong>Registration:</strong>
+                        <a href="{{ vehicle.registration_document.url }}" target="_blank" class="btn btn-sm btn-info">
+                            <i class="bi bi-file-earmark-pdf"></i> View Document
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% if vehicle.notes %}
+                    <div class="col-md-12 mt-3">
+                        <strong>Notes:</strong><br>
+                        <p class="mt-2">{{ vehicle.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Repair History</h5>
+                <strong>Total Repair Cost: {{ total_repair_cost|currency }}</strong>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Parts Replaced</th>
+                                <th>Cost</th>
+                                <th>Shop/Technician</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for repair in repairs %}
+                            <tr>
+                                <td>{{ repair.date_of_repair }}</td>
+                                <td>{{ repair.description }}</td>
+                                <td>{{ repair.parts_replaced|default:"-" }}</td>
+                                <td>{{ repair.cost|currency }}</td>
+                                <td>
+                                    {% if repair.repair_shop %}{{ repair.repair_shop }}{% endif %}
+                                    {% if repair.technician %}({{ repair.technician }}){% endif %}
+                                </td>
+                                <td>
+                                    {% if repair.status == 'Completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Ongoing</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">No repair records found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

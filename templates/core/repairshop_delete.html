@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Repair Shop{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-tools me-2"></i>Delete Repair Shop</h2>
+                <a href="{% url 'repairshop_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Repair Shops
+                </a>
+            </div>
+            
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Warning!</strong> This action cannot be undone. Are you sure you want to delete this repair shop?
+                            </div>
+                            
+                            <div class="repair-shop-info p-3 bg-light rounded">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                        {{ repair_shop.name|first|upper }}
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">{{ repair_shop.name }}</h5>
+                                        {% if repair_shop.contact_person %}
+                                            <p class="text-muted mb-0">Contact: {{ repair_shop.contact_person }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Phone:</strong><br>
+                                        {% if repair_shop.phone %}
+                                            <i class="bi bi-phone me-1"></i>{{ repair_shop.phone }}
+                                        {% else %}
+                                            <span class="text-muted">Not provided</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Email:</strong><br>
+                                        {% if repair_shop.email %}
+                                            <i class="bi bi-envelope me-1"></i>{{ repair_shop.email }}
+                                        {% else %}
+                                            <span class="text-muted">Not provided</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                {% if repair_shop.address %}
+                                <div class="mt-2">
+                                    <strong>Address:</strong><br>
+                                    <i class="bi bi-geo-alt me-1"></i>{{ repair_shop.address }}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mt-2">
+                                    <strong>Status:</strong>
+                                    <span class="badge {% if repair_shop.is_active %}bg-success{% else %}bg-secondary{% endif %} ms-2">
+                                        {% if repair_shop.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <form method="post" class="mt-4">
+                                {% csrf_token %}
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'repairshop_list' %}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-times me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="bi bi-trash me-2"></i>Delete Repair Shop
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-lg {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+

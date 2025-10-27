@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load currency_filters %}
+
+{% block title %}Vehicles - Fleet Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-car-front"></i> Vehicles</h2>
+    <a href="{% url 'vehicle_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add Vehicle
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control" placeholder="Search..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="Serviceable" {% if status_filter == 'Serviceable' %}selected{% endif %}>Serviceable</option>
+                    <option value="Under Repair" {% if status_filter == 'Under Repair' %}selected{% endif %}>Under Repair</option>
+                    <option value="Unserviceable" {% if status_filter == 'Unserviceable' %}selected{% endif %}>Unserviceable</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="department" class="form-select">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}" {% if department_filter == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Plate No.</th>
+                        <th>Brand/Model</th>
+                        <th>Year</th>
+                        <th>Type</th>
+                        <th>Department</th>
+                        <th>Driver</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vehicle in vehicles %}
+                    <tr>
+                        <td><strong>{{ vehicle.plate_number }}</strong></td>
+                        <td>{{ vehicle.brand }} {{ vehicle.model }}</td>
+                        <td>{{ vehicle.year }}</td>
+                        <td>{{ vehicle.vehicle_type }}</td>
+                        <td>{{ vehicle.department|default:"-" }}</td>
+                        <td>{{ vehicle.assigned_driver|default:"-" }}</td>
+                        <td>
+                            {% if vehicle.status == 'Serviceable' %}
+                                <span class="badge bg-success">Serviceable</span>
+                            {% elif vehicle.status == 'Under Repair' %}
+                                <span class="badge bg-warning text-dark">Under Repair</span>
+                            {% elif vehicle.status == 'Unserviceable' %}
+                                <span class="badge bg-secondary">Unserviceable</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'vehicle_detail' vehicle.pk %}" class="btn btn-sm btn-info">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'vehicle_edit' vehicle.pk %}" class="btn btn-sm btn-warning">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No vehicles found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

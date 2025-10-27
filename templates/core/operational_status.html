@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load currency_filters %}
+
+{% block title %}Vehicle Status - Fleet Management{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-activity"></i> Vehicle Status</h2>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Serviceable Vehicles ({{ operational.count }})</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for vehicle in operational %}
+                    <a href="{% url 'vehicle_detail' vehicle.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ vehicle.plate_number }}</h6>
+                            <span class="badge bg-success">Serviceable</span>
+                        </div>
+                        <p class="mb-1">{{ vehicle.brand }} {{ vehicle.model }}</p>
+                        <small>{{ vehicle.department|default:"No Department" }}</small>
+                    </a>
+                    {% empty %}
+                    <p class="text-center text-muted">No operational vehicles</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Unserviceable Vehicles ({{ non_operational.count }})</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for vehicle in non_operational %}
+                    <a href="{% url 'vehicle_detail' vehicle.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ vehicle.plate_number }}</h6>
+                            <span class="badge bg-secondary">Unserviceable</span>
+                        </div>
+                        <p class="mb-1">{{ vehicle.brand }} {{ vehicle.model }}</p>
+                        <small>{{ vehicle.department|default:"No Department" }}</small>
+                    </a>
+                    {% empty %}
+                    <p class="text-center text-muted">No non-operational vehicles</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Under Repair Vehicles ({{ under_repair.count }})</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for vehicle in under_repair %}
+                    <a href="{% url 'vehicle_detail' vehicle.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ vehicle.plate_number }}</h6>
+                            <span class="badge bg-warning text-dark">Under Repair</span>
+                        </div>
+                        <p class="mb-1">{{ vehicle.brand }} {{ vehicle.model }}</p>
+                        <small>{{ vehicle.department|default:"No Department" }}</small>
+                    </a>
+                    {% empty %}
+                    <p class="text-center text-muted">No vehicles under repair</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
