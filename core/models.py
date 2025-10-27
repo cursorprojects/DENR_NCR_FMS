@@ -168,6 +168,12 @@ class Repair(models.Model):
         ('Ongoing', 'Ongoing'),
     ]
     
+    DISPOSAL_CHOICES = [
+        ('normal', 'Normal Disposal'),
+        ('trade_in', 'Trade-In'),
+        ('waste', 'Waste Material'),
+    ]
+    
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='repairs')
     date_of_repair = models.DateField()
     description = models.TextField()
@@ -176,6 +182,11 @@ class Repair(models.Model):
     repair_shop = models.ForeignKey(RepairShop, on_delete=models.SET_NULL, null=True, blank=True)
     technician = models.CharField(max_length=200, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ongoing')
+    disposal_type = models.CharField(max_length=20, choices=DISPOSAL_CHOICES, default='normal', verbose_name='Parts Disposal')
+    # Additional fields for storing waste material details when disposed
+    waste_material_name = models.CharField(max_length=200, blank=True, verbose_name='Material Name')
+    waste_quantity = models.CharField(max_length=50, blank=True, verbose_name='Quantity')
+    waste_condition = models.CharField(max_length=200, blank=True, verbose_name='Condition/State')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

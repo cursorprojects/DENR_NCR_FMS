@@ -40,7 +40,8 @@ class RepairForm(forms.ModelForm):
         model = Repair
         fields = [
             'vehicle', 'date_of_repair', 'description', 'parts_replaced',
-            'cost', 'repair_shop', 'technician', 'status'
+            'cost', 'repair_shop', 'technician', 'status', 'disposal_type',
+            'waste_material_name', 'waste_quantity', 'waste_condition'
         ]
         widgets = {
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
@@ -51,6 +52,10 @@ class RepairForm(forms.ModelForm):
             'repair_shop': forms.Select(attrs={'class': 'form-control'}),
             'technician': forms.TextInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
+            'disposal_type': forms.Select(attrs={'class': 'form-control'}),
+            'waste_material_name': forms.HiddenInput(attrs={'id': 'form_waste_material_name'}),
+            'waste_quantity': forms.HiddenInput(attrs={'id': 'form_waste_quantity'}),
+            'waste_condition': forms.HiddenInput(attrs={'id': 'form_waste_condition'}),
         }
     
     def __init__(self, *args, **kwargs):
