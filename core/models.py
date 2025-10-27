@@ -104,6 +104,11 @@ class Vehicle(models.Model):
         ('Unserviceable', 'Unserviceable'),
     ]
     
+    RFID_TYPE_CHOICES = [
+        ('Autosweep', 'Autosweep'),
+        ('Easytrip', 'Easytrip'),
+    ]
+    
     plate_number = models.CharField(max_length=50, unique=True)
     vehicle_type = models.CharField(max_length=100)
     model = models.CharField(max_length=100)
@@ -118,6 +123,11 @@ class Vehicle(models.Model):
     current_mileage = models.IntegerField(default=0)
     photo = models.ImageField(upload_to='vehicles/', blank=True, null=True)
     registration_document = models.FileField(upload_to='documents/', blank=True, null=True)
+    # RFID and Fleet Card Information
+    rfid_number = models.CharField(max_length=100, blank=True, verbose_name='RFID Number')
+    rfid_type = models.CharField(max_length=20, choices=RFID_TYPE_CHOICES, blank=True, null=True, verbose_name='RFID Type')
+    fleet_card_number = models.CharField(max_length=100, blank=True, verbose_name='Fleet Card Number')
+    gas_station = models.CharField(max_length=200, blank=True, verbose_name='Gas Station')
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

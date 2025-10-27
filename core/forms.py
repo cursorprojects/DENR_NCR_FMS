@@ -11,7 +11,8 @@ class VehicleForm(forms.ModelForm):
         fields = [
             'plate_number', 'vehicle_type', 'model', 'brand', 'year',
             'department', 'assigned_driver', 'status', 'date_acquired',
-            'current_mileage', 'photo', 'registration_document', 'notes'
+            'current_mileage', 'rfid_number', 'rfid_type', 'fleet_card_number',
+            'gas_station', 'photo', 'registration_document', 'notes'
         ]
         widgets = {
             'plate_number': forms.TextInput(attrs={'class': 'form-control'}),
@@ -24,6 +25,10 @@ class VehicleForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-control'}),
             'date_acquired': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'current_mileage': forms.NumberInput(attrs={'class': 'form-control'}),
+            'rfid_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'rfid_type': forms.Select(attrs={'class': 'form-control'}),
+            'fleet_card_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'gas_station': forms.TextInput(attrs={'class': 'form-control'}),
             'photo': forms.FileInput(attrs={'class': 'form-control'}),
             'registration_document': forms.FileInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),

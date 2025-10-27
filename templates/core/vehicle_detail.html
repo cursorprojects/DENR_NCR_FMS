@@ -71,14 +71,42 @@
                     <div class="col-md-6 mb-2">
                         <strong>Current Mileage:</strong> {{ vehicle.current_mileage }} km
                     </div>
-                    {% if vehicle.registration_document %}
+                </div>
+                <hr>
+                <h6 class="mb-3">RFID & Fleet Card Information</h6>
+                <div class="row">
+                    {% if vehicle.rfid_number %}
+                    <div class="col-md-6 mb-2">
+                        <strong>RFID Number:</strong> {{ vehicle.rfid_number }}
+                    </div>
+                    {% endif %}
+                    {% if vehicle.rfid_type %}
+                    <div class="col-md-6 mb-2">
+                        <strong>RFID Type:</strong> {{ vehicle.get_rfid_type_display }}
+                    </div>
+                    {% endif %}
+                    {% if vehicle.fleet_card_number %}
+                    <div class="col-md-6 mb-2">
+                        <strong>Fleet Card Number:</strong> {{ vehicle.fleet_card_number }}
+                    </div>
+                    {% endif %}
+                    {% if vehicle.gas_station %}
+                    <div class="col-md-6 mb-2">
+                        <strong>Gas Station:</strong> {{ vehicle.gas_station }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% if vehicle.registration_document %}
+                <hr>
+                <div class="row">
                     <div class="col-md-6 mb-2">
                         <strong>Registration:</strong>
                         <a href="{{ vehicle.registration_document.url }}" target="_blank" class="btn btn-sm btn-info">
                             <i class="bi bi-file-earmark-pdf"></i> View Document
                         </a>
                     </div>
-                    {% endif %}
+                </div>
+                {% endif %}
                     {% if vehicle.notes %}
                     <div class="col-md-12 mt-3">
                         <strong>Notes:</strong><br>
