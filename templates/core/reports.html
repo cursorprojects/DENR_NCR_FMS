@@ -71,21 +71,21 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Repair Costs by Department</h5>
+                <h5 class="mb-0">Repair Costs by Division</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>Department</th>
+                                <th>Division</th>
                                 <th>Cost</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for item in department_report %}
+                            {% for item in division_report %}
                             <tr>
-                                <td>{{ item.department }}</td>
+                                <td>{{ item.division }}</td>
                                 <td>{{ item.cost|currency }}</td>
                             </tr>
                             {% empty %}

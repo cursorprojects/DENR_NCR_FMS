@@ -163,21 +163,21 @@
             </div>
         </div>
 
-        <!-- Department Management -->
+        <!-- Division Management -->
         <div class="col-md-6 col-lg-4 mb-3">
             <div class="card h-100">
                 <div class="card-body text-center">
                     <div class="mb-3">
                         <i class="bi bi-building text-info" style="font-size: 3rem;"></i>
                     </div>
-                    <h5 class="card-title">Department Management</h5>
-                    <p class="card-text text-muted">Manage organizational departments and assignments</p>
+                    <h5 class="card-title">Division Management</h5>
+                    <p class="card-text text-muted">Manage organizational divisions and assignments</p>
                     <div class="mb-3">
-                        <small class="text-muted">Total Departments</small>
-                        <div class="fw-bold">{{ total_departments|default:"0" }}</div>
+                        <small class="text-muted">Total Divisions</small>
+                        <div class="fw-bold">{{ total_divisions|default:"0" }}</div>
                     </div>
                     <a href="{% url 'department_list' %}" class="btn btn-info">
-                        <i class="bi bi-gear me-2"></i>Manage Departments
+                        <i class="bi bi-gear me-2"></i>Manage Divisions
                     </a>
                 </div>
             </div>

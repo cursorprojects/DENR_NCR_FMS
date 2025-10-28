@@ -26,10 +26,10 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <select name="department" class="form-select">
-                    <option value="">All Departments</option>
-                    {% for dept in departments %}
-                    <option value="{{ dept.id }}" {% if department_filter == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+                <select name="division" class="form-select">
+                    <option value="">All Divisions</option>
+                    {% for dept in divisions %}
+                    <option value="{{ dept.id }}" {% if division_filter == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -52,7 +52,7 @@
                         <th>Brand/Model</th>
                         <th>Year</th>
                         <th>Type</th>
-                        <th>Department</th>
+                        <th>Division</th>
                         <th>Driver</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -65,7 +65,7 @@
                         <td>{{ vehicle.brand }} {{ vehicle.model }}</td>
                         <td>{{ vehicle.year }}</td>
                         <td>{{ vehicle.vehicle_type }}</td>
-                        <td>{{ vehicle.department|default:"-" }}</td>
+                        <td>{{ vehicle.division|default:"-" }}</td>
                         <td>{{ vehicle.assigned_driver|default:"-" }}</td>
                         <td>
                             {% if vehicle.status == 'Serviceable' %}

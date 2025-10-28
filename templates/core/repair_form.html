@@ -134,7 +134,7 @@
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
                                 <input type="text" id="cost_display" class="form-control" value="" readonly>
-                                <input type="hidden" name="cost" id="id_cost" value="">
+                                <input type="hidden" name="cost" id="id_cost" value="{% if form.cost.value %}{{ form.cost.value }}{% else %}0{% endif %}">
                             </div>
                             <small class="form-text text-muted">Auto-calculated from parts table</small>
                             {% if form.cost.errors %}
@@ -405,6 +405,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Calculate initial total cost
     calculateTotalCost();
+    
+    // Format the initial parts cost display
+    const initialPartsCost = parseFloat(document.getElementById('id_cost').value) || 0;
+    if (initialPartsCost > 0) {
+        document.getElementById('cost_display').value = formatNumber(initialPartsCost.toFixed(2));
+    }
 });
 
 document.getElementById('add-row-btn').addEventListener('click', function() {

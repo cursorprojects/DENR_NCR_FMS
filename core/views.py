@@ -11,8 +11,8 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.contrib.auth import get_user_model
 import json
-from .models import Vehicle, Repair, Driver, Department, ActivityLog, RepairShop
-from .forms import VehicleForm, RepairForm, DriverForm, DepartmentForm, UserForm, RepairShopForm, RepairPartItemFormSet
+from .models import Vehicle, Repair, Driver, Division, ActivityLog, RepairShop
+from .forms import VehicleForm, RepairForm, DriverForm, DivisionForm, UserForm, RepairShopForm, RepairPartItemFormSet
 
 User = get_user_model()
 
@@ -85,13 +85,13 @@ def vehicle_list(request):
     
     # Filtering
     status_filter = request.GET.get('status', '')
-    department_filter = request.GET.get('department', '')
+    division_filter = request.GET.get('division', '')
     search_query = request.GET.get('search', '')
     
     if status_filter:
         vehicles = vehicles.filter(status=status_filter)
-    if department_filter:
-        vehicles = vehicles.filter(department_id=department_filter)
+    if division_filter:
+        vehicles = vehicles.filter(division_id=division_filter)
     if search_query:
         vehicles = vehicles.filter(
             Q(plate_number__icontains=search_query) |
@@ -99,13 +99,13 @@ def vehicle_list(request):
             Q(model__icontains=search_query)
         )
     
-    departments = Department.objects.all()
+    divisions = Division.objects.all()
     
     context = {
         'vehicles': vehicles,
-        'departments': departments,
+        'divisions': divisions,
         'status_filter': status_filter,
-        'department_filter': department_filter,
+        'division_filter': division_filter,
         'search_query': search_query,
     }
     
@@ -206,6 +206,12 @@ def repair_create(request):
             repair = form.save()
             formset.instance = repair
             formset.save()
+            
+            # Calculate and update the total parts cost
+            total_parts_cost = sum(item.cost for item in repair.part_items.all() if item.cost)
+            repair.cost = total_parts_cost
+            repair.save()
+            
             # If vehicle is marked as damaged, update its status
             if 'damaged' in repair.description.lower() or repair.status == 'Ongoing':
                 repair.vehicle.status = 'Damaged'
@@ -214,7 +220,9 @@ def repair_create(request):
             return redirect('repair_list')
     else:
         form = RepairForm()
+        # For create mode, start with 1 empty form
         formset = RepairPartItemFormSet()
+        formset.extra = 1
     
     return render(request, 'core/repair_form.html', {'form': form, 'formset': formset, 'title': 'Add Repair Record'})
 
@@ -226,13 +234,24 @@ def repair_edit(request, pk):
         form = RepairForm(request.POST, instance=repair)
         formset = RepairPartItemFormSet(request.POST, instance=repair)
         if form.is_valid() and formset.is_valid():
-            form.save()
+            repair = form.save()
             formset.save()
+            
+            # Calculate and update the total parts cost
+            total_parts_cost = sum(item.cost for item in repair.part_items.all() if item.cost)
+            repair.cost = total_parts_cost
+            repair.save()
+            
             messages.success(request, 'Repair record updated successfully!')
             return redirect('repair_list')
     else:
         form = RepairForm(instance=repair)
         formset = RepairPartItemFormSet(instance=repair)
+        # For edit mode, only add extra form if no existing parts
+        if repair.part_items.count() == 0:
+            formset.extra = 1
+        else:
+            formset.extra = 0
     
     return render(request, 'core/repair_form.html', {'form': form, 'formset': formset, 'title': 'Edit Repair Record'})
 
@@ -287,21 +306,21 @@ def reports(request):
                 'cost': total
             })
     
-    # Repair costs by department
-    department_report = []
-    for dept in Department.objects.all():
+    # Repair costs by division
+    division_report = []
+    for dept in Division.objects.all():
         vehicles = dept.vehicle_set.all()
         total = sum(v.total_repair_costs for v in vehicles)
         if total > 0:
-            department_report.append({
-                'department': dept.name,
+            division_report.append({
+                'division': dept.name,
                 'cost': total
             })
     
     context = {
         'monthly_report': monthly_report,
         'vehicle_report': vehicle_report,
-        'department_report': department_report,
+        'division_report': division_report,
     }
     
     return render(request, 'core/reports.html', context)
@@ -522,8 +541,8 @@ def admin_dashboard(request):
     completed_repairs = Repair.objects.filter(status='Completed').count()
     ongoing_repairs = Repair.objects.filter(status='Ongoing').count()
     
-    # Department, Driver, and Repair Shop statistics
-    total_departments = Department.objects.count()
+    # Division, Driver, and Repair Shop statistics
+    total_divisions = Division.objects.count()
     total_drivers = Driver.objects.count()
     total_repair_shops = RepairShop.objects.count()
     active_repair_shops = RepairShop.objects.filter(is_active=True).count()
@@ -543,7 +562,7 @@ def admin_dashboard(request):
         'total_repairs': total_repairs,
         'completed_repairs': completed_repairs,
         'ongoing_repairs': ongoing_repairs,
-        'total_departments': total_departments,
+        'total_divisions': total_divisions,
         'total_drivers': total_drivers,
         'total_repair_shops': total_repair_shops,
         'active_repair_shops': active_repair_shops,

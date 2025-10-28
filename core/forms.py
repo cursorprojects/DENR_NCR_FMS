@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.forms import inlineformset_factory
-from .models import Vehicle, Repair, Driver, Department, RepairShop, RepairPart, RepairPartItem
+from .models import Vehicle, Repair, Driver, Division, RepairShop, RepairPart, RepairPartItem
 
 User = get_user_model()
 
@@ -11,17 +11,22 @@ class VehicleForm(forms.ModelForm):
         model = Vehicle
         fields = [
             'plate_number', 'vehicle_type', 'model', 'brand', 'year',
-            'department', 'assigned_driver', 'status', 'date_acquired',
+            'engine_number', 'chassis_number', 'color', 'acquisition_cost',
+            'division', 'assigned_driver', 'status', 'date_acquired',
             'current_mileage', 'rfid_number', 'rfid_type', 'fleet_card_number',
             'gas_station', 'photo', 'registration_document', 'notes'
         ]
         widgets = {
             'plate_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'vehicle_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'vehicle_type': forms.Select(attrs={'class': 'form-control'}),
             'model': forms.TextInput(attrs={'class': 'form-control'}),
             'brand': forms.TextInput(attrs={'class': 'form-control'}),
             'year': forms.NumberInput(attrs={'class': 'form-control'}),
-            'department': forms.Select(attrs={'class': 'form-control'}),
+            'engine_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'chassis_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'color': forms.TextInput(attrs={'class': 'form-control'}),
+            'acquisition_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'division': forms.Select(attrs={'class': 'form-control'}),
             'assigned_driver': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'date_acquired': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -88,7 +93,7 @@ RepairPartItemFormSet = inlineformset_factory(
     Repair, 
     RepairPartItem, 
     form=RepairPartItemForm,
-    extra=1,  # Start with 1 empty form
+    extra=0,  # No extra forms by default
     can_delete=True,
     can_delete_extra=False
 )
@@ -131,9 +136,9 @@ class DriverForm(forms.ModelForm):
         }
 
 
-class DepartmentForm(forms.ModelForm):
+class DivisionForm(forms.ModelForm):
     class Meta:
-        model = Department
+        model = Division
         fields = ['name', 'description']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),

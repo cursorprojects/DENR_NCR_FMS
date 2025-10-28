@@ -38,10 +38,23 @@
                                     <h6><i class="bi bi-calendar me-2"></i>Date of Repair</h6>
                                     <p class="mb-3">{{ repair.date_of_repair }}</p>
                                     
-                                    <h6><i class="bi bi-currency-peso me-2"></i>Cost</h6>
-                                    <p class="mb-3">
-                                        <span class="h5 text-primary">{{ repair.cost|currency }}</span>
-                                    </p>
+                                    <h6><i class="bi bi-currency-peso me-2"></i>Cost Breakdown</h6>
+                                    <div class="mb-3">
+                                        <div class="row">
+                                            <div class="col-4">
+                                                <small class="text-muted">Parts Cost</small><br>
+                                                <span class="fw-bold">{{ repair.cost|currency }}</span>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted">Labor Cost</small><br>
+                                                <span class="fw-bold">{{ repair.labor_cost|currency }}</span>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted">Total Cost</small><br>
+                                                <span class="h5 text-primary">{{ repair.total_cost|currency }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <h6><i class="bi bi-tools me-2"></i>Repair Shop</h6>
@@ -91,17 +104,17 @@
                             <!-- Parts Table -->
                             {% if repair.part_items.exists or repair.repairing_part %}
                             <hr>
-                            <h6><i class="bi bi-gear me-2"></i>Parts Replaced</h6>
+                            <h6><i class="bi bi-gear me-2"></i>Parts Information</h6>
                             <div class="table-responsive">
                                 <table class="table table-sm table-bordered">
-                                    <thead class="table-light">
+                                    <thead class="table-dark">
                                         <tr>
-                                            <th>Part</th>
-                                            <th>Quantity</th>
-                                            <th>Unit</th>
-                                            <th>Cost</th>
-                                            <th>Additional Info</th>
-                                            <th>Disposal Type</th>
+                                            <th style="width: 20%;">Part</th>
+                                            <th style="width: 10%;">Quantity</th>
+                                            <th style="width: 12%;">Unit</th>
+                                            <th style="width: 12%;">Cost</th>
+                                            <th style="width: 20%;">Additional Info</th>
+                                            <th style="width: 14%;">Disposal Type</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -118,7 +131,7 @@
                                             <td>{{ part_item.unit|default:"-" }}</td>
                                             <td>
                                                 {% if part_item.cost %}
-                                                    ₱{{ part_item.cost|floatformat:2 }}
+                                                    <span class="fw-bold">{{ part_item.cost|currency }}</span>
                                                 {% else %}
                                                     -
                                                 {% endif %}

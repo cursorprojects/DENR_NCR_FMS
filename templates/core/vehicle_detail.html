@@ -60,16 +60,28 @@
                         {% endif %}
                     </div>
                     <div class="col-md-6 mb-2">
-                        <strong>Department:</strong> {{ vehicle.department|default:"-" }}
+                        <strong>Division:</strong> {{ vehicle.division|default:"-" }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Engine Number:</strong> {{ vehicle.engine_number|default:"-" }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Chassis Number:</strong> {{ vehicle.chassis_number|default:"-" }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Color:</strong> {{ vehicle.color|default:"-" }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Acquisition Cost:</strong> {{ vehicle.acquisition_cost|currency|default:"-" }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong>Current Mileage:</strong> {{ vehicle.current_mileage|default:"0" }} km
                     </div>
                     <div class="col-md-6 mb-2">
                         <strong>Assigned Driver:</strong> {{ vehicle.assigned_driver|default:"-" }}
                     </div>
                     <div class="col-md-6 mb-2">
                         <strong>Date Acquired:</strong> {{ vehicle.date_acquired }}
-                    </div>
-                    <div class="col-md-6 mb-2">
-                        <strong>Current Mileage:</strong> {{ vehicle.current_mileage }} km
                     </div>
                 </div>
                 <hr>
@@ -145,7 +157,20 @@
                                 <td>{{ repair.date_of_repair }}</td>
                                 <td>{{ repair.description }}</td>
                                 <td>
-                                    {% if repair.repairing_part %}
+                                    {% if repair.part_items.exists %}
+                                        {% for part_item in repair.part_items.all|slice:":2" %}
+                                            <span class="badge bg-secondary">
+                                                {% if part_item.part %}{{ part_item.part.name }}{% else %}N/A{% endif %}
+                                            </span>
+                                            {% if part_item.quantity %}
+                                                <small class="text-muted">({{ part_item.quantity }} {{ part_item.unit|default:'' }})</small>
+                                            {% endif %}
+                                            {% if not forloop.last %}<br>{% endif %}
+                                        {% endfor %}
+                                        {% if repair.part_items.count > 2 %}
+                                            <br><small class="text-muted">+{{ repair.part_items.count|add:"-2" }} more</small>
+                                        {% endif %}
+                                    {% elif repair.repairing_part %}
                                         <span class="badge bg-secondary">{{ repair.repairing_part.name }}</span>
                                         {% if repair.part_quantity %}
                                             <br><small class="text-muted">{{ repair.part_quantity }} {{ repair.part_unit|default:'' }}</small>
@@ -154,7 +179,7 @@
                                         <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ repair.cost|currency }}</td>
+                                <td><strong>{{ repair.total_cost|currency }}</strong></td>
                                 <td>
                                     {% if repair.repair_shop %}{{ repair.repair_shop }}{% endif %}
                                     {% if repair.technician %}({{ repair.technician }}){% endif %}

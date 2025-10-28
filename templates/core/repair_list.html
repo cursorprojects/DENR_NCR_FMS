@@ -61,7 +61,18 @@
                         <td>{{ repair.date_of_repair }}</td>
                         <td>{{ repair.description|truncatewords:10 }}</td>
                         <td>
-                            {% if repair.repairing_part %}
+                            {% if repair.part_items.exists %}
+                                {% for part_item in repair.part_items.all|slice:":2" %}
+                                    <span class="badge bg-secondary">
+                                        {% if part_item.part %}{{ part_item.part.name }}{% else %}N/A{% endif %}
+                                    </span>
+                                    {% if part_item.quantity %}<small class="text-muted">({{ part_item.quantity }} {{ part_item.unit|default:'' }})</small>{% endif %}
+                                    {% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                                {% if repair.part_items.count > 2 %}
+                                    <br><small class="text-muted">+{{ repair.part_items.count|add:"-2" }} more</small>
+                                {% endif %}
+                            {% elif repair.repairing_part %}
                                 <span class="badge bg-secondary">{{ repair.repairing_part.name }}</span>
                                 {% if repair.part_quantity %}
                                     <br><small class="text-muted">{{ repair.part_quantity }} {{ repair.part_unit|default:'' }}</small>
@@ -70,7 +81,7 @@
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
-                        <td>{{ repair.cost|currency }}</td>
+                        <td><strong>{{ repair.total_cost|currency }}</strong></td>
                         <td>
                             {% if repair.repair_shop %}
                                 <strong>{{ repair.repair_shop.name }}</strong>

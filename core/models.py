@@ -79,7 +79,7 @@ class ActivityLog(models.Model):
         ordering = ['-timestamp']
 
 
-class Department(models.Model):
+class Division(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     
@@ -109,14 +109,38 @@ class Vehicle(models.Model):
         ('Easytrip', 'Easytrip'),
     ]
     
+    VEHICLE_TYPE_CHOICES = [
+        ('Sedan', 'Sedan'),
+        ('SUV', 'SUV'),
+        ('Hatchback', 'Hatchback'),
+        ('Coupe', 'Coupe'),
+        ('Convertible', 'Convertible'),
+        ('Pickup Truck', 'Pickup Truck'),
+        ('Van', 'Van'),
+        ('Minivan', 'Minivan'),
+        ('Wagon', 'Wagon'),
+        ('Sports Car', 'Sports Car'),
+        ('Motorcycle', 'Motorcycle'),
+        ('Bicycle', 'Bicycle'),
+        ('Bus', 'Bus'),
+        ('Ambulance', 'Ambulance'),
+        ('Fire Truck', 'Fire Truck'),
+        ('Police Car', 'Police Car'),
+        ('Other', 'Other'),
+    ]
+    
     plate_number = models.CharField(max_length=50, unique=True)
-    vehicle_type = models.CharField(max_length=100)
+    vehicle_type = models.CharField(max_length=100, choices=VEHICLE_TYPE_CHOICES)
     model = models.CharField(max_length=100)
     brand = models.CharField(max_length=100)
     year = models.IntegerField(
         validators=[MinValueValidator(1900)]
     )
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    engine_number = models.CharField(max_length=100, blank=True, verbose_name='Engine Number')
+    chassis_number = models.CharField(max_length=100, blank=True, verbose_name='Chassis Number')
+    color = models.CharField(max_length=50, blank=True, verbose_name='Color')
+    acquisition_cost = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)], verbose_name='Acquisition Cost')
+    division = models.ForeignKey(Division, on_delete=models.SET_NULL, null=True, blank=True)
     assigned_driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Serviceable')
     date_acquired = models.DateField()
@@ -211,6 +235,13 @@ class Repair(models.Model):
     
     def __str__(self):
         return f"{self.vehicle.plate_number} - {self.date_of_repair}"
+    
+    @property
+    def total_cost(self):
+        """Calculate total cost as sum of parts cost and labor cost"""
+        parts_cost = self.cost or 0
+        labor_cost = self.labor_cost or 0
+        return parts_cost + labor_cost
     
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
