@@ -5,163 +5,415 @@
 {% block title %}Dashboard - Fleet Management{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="bi bi-speedometer2"></i> Fleet Management Dashboard</h2>
+                <div class="text-muted">
+                    <small>Last updated: {{ "now"|date:"F d, Y g:i A" }}</small>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+    <!-- Vehicle Status Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3"><i class="bi bi-truck"></i> Vehicle Status Overview</h4>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-primary h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_list' %}'">
+                <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title">Total Vehicles</h6>
                         <h2 class="mb-0">{{ total_vehicles }}</h2>
+                        <small>Click to manage vehicles</small>
                     </div>
-                    <i class="bi bi-truck" style="font-size: 2.5rem;"></i>
+                    <i class="bi bi-truck" style="font-size: 3rem; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-success h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_list' %}?status=Serviceable'">
+                <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title">Serviceable</h6>
                         <h2 class="mb-0">{{ operational }}</h2>
+                        <small>Ready for use</small>
                     </div>
-                    <i class="bi bi-check-circle" style="font-size: 2.5rem;"></i>
+                    <i class="bi bi-check-circle" style="font-size: 3rem; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-warning">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-warning h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_list' %}?status=Under Repair'">
+                <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title">Under Repair</h6>
                         <h2 class="mb-0">{{ under_repair }}</h2>
+                        <small>Currently being repaired</small>
                     </div>
-                    <i class="bi bi-tools" style="font-size: 2.5rem;"></i>
+                    <i class="bi bi-tools" style="font-size: 3rem; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-secondary">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-danger h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_list' %}?status=Unserviceable'">
+                <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title">Unserviceable</h6>
                         <h2 class="mb-0">{{ non_operational }}</h2>
+                        <small>Out of service</small>
                     </div>
-                    <i class="bi bi-x-circle" style="font-size: 2.5rem;"></i>
+                    <i class="bi bi-x-circle" style="font-size: 3rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3"><i class="bi bi-lightning"></i> Quick Actions</h4>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_create' %}'">
+                <div class="card-body text-center">
+                    <i class="bi bi-plus-circle text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-2">Add Vehicle</h5>
+                    <p class="card-text text-muted">Register a new vehicle</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'repair_create' %}'">
+                <div class="card-body text-center">
+                    <i class="bi bi-wrench text-warning" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-2">New Repair</h5>
+                    <p class="card-text text-muted">Record a repair</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'pms_create' %}'">
+                <div class="card-body text-center">
+                    <i class="bi bi-gear text-info" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-2">Schedule PMS</h5>
+                    <p class="card-text text-muted">Schedule preventive maintenance</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'driver_create' %}'">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-plus text-success" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-2">Add Driver</h5>
+                    <p class="card-text text-muted">Register a new driver</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Management Sections -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3"><i class="bi bi-gear"></i> Management</h4>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_list' %}'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-truck text-primary me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <h5 class="card-title mb-1">Vehicle Management</h5>
+                            <p class="card-text text-muted mb-0">Manage fleet vehicles</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'repair_list' %}'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-wrench text-warning me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <h5 class="card-title mb-1">Repair Records</h5>
+                            <p class="card-text text-muted mb-0">View and manage repairs</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'pms_list' %}'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-gear text-info me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <h5 class="card-title mb-1">PMS Records</h5>
+                            <p class="card-text text-muted mb-0">Preventive maintenance</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'driver_list' %}'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person text-success me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <h5 class="card-title mb-1">Driver Management</h5>
+                            <p class="card-text text-muted mb-0">Manage drivers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'department_list' %}'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-building text-secondary me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <h5 class="card-title mb-1">Departments</h5>
+                            <p class="card-text text-muted mb-0">Manage departments</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'repairshop_list' %}'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-shop text-dark me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <h5 class="card-title mb-1">Repair Shops</h5>
+                            <p class="card-text text-muted mb-0">Manage service providers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cost Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3"><i class="bi bi-currency-peso"></i> Cost Summary</h4>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-primary">This Month</h6>
+                            <h3 class="mb-0">{{ monthly_cost|currency }}</h3>
+                            <small class="text-muted">Repair costs</small>
+                        </div>
+                        <i class="bi bi-calendar-month text-primary" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-success">This Year</h6>
+                            <h3 class="mb-0">{{ yearly_cost|currency }}</h3>
+                            <small class="text-muted">Total repair costs</small>
+                        </div>
+                        <i class="bi bi-calendar-year text-success" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicles Near PMS -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-exclamation-triangle text-warning"></i> Vehicles Near PMS
+                        {% if vehicles_near_pms %}
+                        <span class="badge bg-warning ms-2">{{ vehicles_near_pms|length }}</span>
+                        {% endif %}
+                    </h5>
+                    <a href="{% url 'pms_create' %}" class="btn btn-sm btn-warning">
+                        <i class="bi bi-plus-circle"></i> Schedule PMS
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-warning">
+                                <tr>
+                                    <th>Vehicle</th>
+                                    <th>Division</th>
+                                    <th>Driver</th>
+                                    <th>Current Mileage</th>
+                                    <th>Last PMS</th>
+                                    <th>Reason</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in vehicles_near_pms %}
+                                <tr class="clickable-row" onclick="window.location.href='{% url 'vehicle_detail' item.vehicle.id %}'">
+                                    <td>
+                                        <strong>{{ item.vehicle.plate_number }}</strong>
+                                        <br><small class="text-muted">{{ item.vehicle.brand }} {{ item.vehicle.model }} {{ item.vehicle.year }}</small>
+                                    </td>
+                                    <td>{{ item.vehicle.division.name|default:"-" }}</td>
+                                    <td>{{ item.vehicle.assigned_driver.name|default:"No driver" }}</td>
+                                    <td>
+                                        <strong>{{ item.current_mileage|floatformat:0 }} km</strong>
+                                        {% if item.km_since_last_pms > 0 %}
+                                        <br><small class="text-muted">+{{ item.km_since_last_pms|floatformat:0 }} km since last PMS</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.last_pms_date %}
+                                            {{ item.last_pms_date|date:"M d, Y" }}
+                                            {% if item.last_pms_mileage %}
+                                            <br><small class="text-muted">{{ item.last_pms_mileage|floatformat:0 }} km</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">No PMS record</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.reason == "6 months since last PMS" %}
+                                            <span class="badge bg-warning">{{ item.reason }}</span>
+                                        {% elif item.reason == "No PMS record found" %}
+                                            <span class="badge bg-danger">{{ item.reason }}</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ item.reason }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'pms_create' %}?vehicle={{ item.vehicle.id }}" class="btn btn-sm btn-warning">
+                                            <i class="bi bi-gear"></i> Schedule PMS
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                                        <br>All vehicles are up to date with PMS!
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="bi bi-clock-history"></i> Recent Repairs</h5>
+                    <a href="{% url 'repair_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Vehicle</th>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Cost</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for repair in recent_repairs %}
+                                <tr class="clickable-row" onclick="window.location.href='{% url 'repair_detail' repair.id %}'">
+                                    <td>
+                                        <strong>{{ repair.vehicle.plate_number }}</strong>
+                                        <br><small class="text-muted">{{ repair.vehicle.make }} {{ repair.vehicle.model }}</small>
+                                    </td>
+                                    <td>{{ repair.date_of_repair|date:"M d, Y" }}</td>
+                                    <td>{{ repair.description|truncatewords:8 }}</td>
+                                    <td>{{ repair.total_cost|currency }}</td>
+                                    <td>
+                                        {% if repair.status == 'Completed' %}
+                                            <span class="badge bg-success">{{ repair.status }}</span>
+                                        {% elif repair.status == 'In Progress' %}
+                                            <span class="badge bg-warning">{{ repair.status }}</span>
+                                        {% elif repair.status == 'Pending' %}
+                                            <span class="badge bg-info">{{ repair.status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ repair.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                        <br>No repairs recorded yet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-currency-peso me-2"></i> Repair Costs</h5>
-                <p class="mb-2"><strong>This Month:</strong> {{ monthly_cost|currency }}</p>
-                <p class="mb-0"><strong>This Year:</strong> {{ yearly_cost|currency }}</p>
-            </div>
-        </div>
-    </div>
-</div>
+<style>
+.clickable-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
 
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0"><i class="bi bi-graph-up"></i> Monthly Repair Costs (Last 12 Months)</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="monthlyCostsChart"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
+.clickable-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #007bff;
+}
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0"><i class="bi bi-clock-history"></i> Recent Repairs</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Vehicle</th>
-                                <th>Date</th>
-                                <th>Description</th>
-                                <th>Cost</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for repair in recent_repairs %}
-                            <tr>
-                                <td>{{ repair.vehicle.plate_number }}</td>
-                                <td>{{ repair.date_of_repair }}</td>
-                                <td>{{ repair.description|truncatewords:10 }}</td>
-                                <td>{{ repair.cost|currency }}</td>
-                                <td>
-                                    <span class="badge badge-{{ repair.status|lower }}">
-                                        {{ repair.status }}
-                                    </span>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center">No repairs recorded yet.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
 
-{% endblock %}
+.clickable-row:hover {
+    background-color: #f8f9fa;
+}
 
-{% block extra_js %}
-<script>
-    const monthlyCostsData = {{ monthly_costs|safe }};
-    
-    const ctx = document.getElementById('monthlyCostsChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: monthlyCostsData.map(item => item.month),
-            datasets: [{
-                label: 'Repair Costs (₱)',
-                data: monthlyCostsData.map(item => item.cost),
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-</script>
+.card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+</style>
 {% endblock %}

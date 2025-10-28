@@ -11,7 +11,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.contrib.auth import get_user_model
 import json
-from .models import Vehicle, Repair, Driver, Division, ActivityLog, RepairShop, PMS
+from .models import Vehicle, Repair, Driver, Division, ActivityLog, RepairShop, PMS, Notification
 from .forms import VehicleForm, RepairForm, DriverForm, DivisionForm, UserForm, RepairShopForm, RepairPartItemFormSet, PMSForm, PMSRepairPartItemFormSet
 
 User = get_user_model()
@@ -45,25 +45,69 @@ def dashboard(request):
     # Recent repairs
     recent_repairs = Repair.objects.all()[:5]
     
-    # Monthly repair costs for the last 12 months
-    monthly_costs = []
-    for i in range(11, -1, -1):
-        month = current_month - i
-        year = current_year
-        if month <= 0:
-            month += 12
-            year -= 1
-        
-        cost = Repair.objects.filter(
-            date_of_repair__month=month,
-            date_of_repair__year=year,
+    # Vehicles near PMS (6 months or 10,000km)
+    from datetime import timedelta
+    six_months_ago = timezone.now().date() - timedelta(days=180)
+    
+    vehicles_near_pms = []
+    all_vehicles = Vehicle.objects.filter(status='Serviceable')
+    
+    for vehicle in all_vehicles:
+        # Get the last PMS record for this vehicle
+        last_pms = PMS.objects.filter(
+            vehicle=vehicle,
             status='Completed'
-        ).aggregate(total=Sum('cost'))['total'] or 0
+        ).order_by('-completed_date').first()
         
-        monthly_costs.append({
-            'month': datetime(year, month, 1).strftime('%b %Y'),
-            'cost': float(cost)
-        })
+        needs_pms = False
+        reason = ""
+        
+        if last_pms:
+            # Check if 6 months have passed since last PMS
+            if last_pms.completed_date and last_pms.completed_date <= six_months_ago:
+                needs_pms = True
+                reason = "6 months since last PMS"
+            # Check if 10,000km have been driven since last PMS
+            elif last_pms.next_service_mileage and vehicle.current_mileage >= last_pms.next_service_mileage:
+                needs_pms = True
+                reason = f"Reached {last_pms.next_service_mileage:,}km"
+        else:
+            # No PMS record found, consider it needs PMS
+            needs_pms = True
+            reason = "No PMS record found"
+        
+        if needs_pms:
+            vehicles_near_pms.append({
+                'vehicle': vehicle,
+                'reason': reason,
+                'last_pms_date': last_pms.completed_date if last_pms else None,
+                'last_pms_mileage': last_pms.mileage_at_service if last_pms else None,
+                'next_service_mileage': last_pms.next_service_mileage if last_pms else None,
+                'current_mileage': vehicle.current_mileage,
+                'km_since_last_pms': vehicle.current_mileage - (last_pms.mileage_at_service if last_pms else 0)
+            })
+    
+    # Sort by urgency (no PMS record first, then by km driven, then by date)
+    vehicles_near_pms.sort(key=lambda x: (
+        0 if x['last_pms_date'] is None else 1,  # No PMS record first
+        -x['km_since_last_pms'],  # Higher km first
+        x['last_pms_date'] if x['last_pms_date'] else timezone.now().date()  # Older dates first
+    ))
+    
+    # Take top 5
+    vehicles_near_pms = vehicles_near_pms[:5]
+    
+    # Get unread notifications for the current user
+    unread_notifications = Notification.objects.filter(
+        user=request.user,
+        is_read=False
+    ).order_by('-created_at')[:10]  # Show latest 10 unread notifications
+    
+    # Get total unread count
+    unread_count = Notification.objects.filter(
+        user=request.user,
+        is_read=False
+    ).count()
     
     context = {
         'total_vehicles': total_vehicles,
@@ -73,7 +117,9 @@ def dashboard(request):
         'monthly_cost': monthly_cost,
         'yearly_cost': yearly_cost,
         'recent_repairs': recent_repairs,
-        'monthly_costs': json.dumps(monthly_costs),
+        'vehicles_near_pms': vehicles_near_pms,
+        'unread_notifications': unread_notifications,
+        'unread_count': unread_count,
     }
     
     return render(request, 'core/dashboard.html', context)
@@ -324,6 +370,46 @@ def reports(request):
     }
     
     return render(request, 'core/reports.html', context)
+
+
+@login_required
+def notifications(request):
+    """View all notifications for the current user"""
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Don't automatically mark as read - user must manually click
+    # This allows users to keep notifications visible until they explicitly mark them as read
+    
+    context = {
+        'notifications': notifications,
+    }
+    
+    return render(request, 'core/notifications.html', context)
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """Mark a specific notification as read"""
+    try:
+        notification = Notification.objects.get(
+            id=notification_id,
+            user=request.user
+        )
+        notification.mark_as_read()
+        return JsonResponse({'success': True})
+    except Notification.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Notification not found'})
+
+
+@login_required
+def mark_all_notifications_read(request):
+    """Mark all notifications as read for the current user"""
+    Notification.objects.filter(
+        user=request.user,
+        is_read=False
+    ).update(is_read=True, read_at=timezone.now())
+    
+    return JsonResponse({'success': True})
 
 
 # Authentication Views

@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications - Fleet Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="bi bi-bell"></i> Notifications</h2>
+                {% if notifications %}
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary" onclick="markAllAsRead()">
+                        <i class="bi bi-check-all"></i> Mark All as Read
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="window.location.reload()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% if notifications %}
+                <div class="card">
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            {% for notification in notifications %}
+                            <div class="list-group-item notification-card {% if not notification.is_read %}unread-notification{% endif %}">
+                                <div class="d-flex align-items-start">
+                                    <div class="me-3 flex-shrink-0">
+                                        {% if notification.notification_type == 'pms_reminder' %}
+                                            <div class="notification-icon bg-warning bg-opacity-25 rounded-circle p-3 d-flex align-items-center justify-content-center">
+                                                <i class="bi bi-gear text-warning fs-4"></i>
+                                            </div>
+                                        {% elif notification.notification_type == 'pms_overdue' %}
+                                            <div class="notification-icon bg-danger bg-opacity-25 rounded-circle p-3 d-flex align-items-center justify-content-center">
+                                                <i class="bi bi-exclamation-triangle text-danger fs-4"></i>
+                                            </div>
+                                        {% elif notification.notification_type == 'repair_completed' %}
+                                            <div class="notification-icon bg-success bg-opacity-25 rounded-circle p-3 d-flex align-items-center justify-content-center">
+                                                <i class="bi bi-check-circle text-success fs-4"></i>
+                                            </div>
+                                        {% elif notification.notification_type == 'vehicle_status' %}
+                                            <div class="notification-icon bg-info bg-opacity-25 rounded-circle p-3 d-flex align-items-center justify-content-center">
+                                                <i class="bi bi-car-front text-info fs-4"></i>
+                                            </div>
+                                        {% else %}
+                                            <div class="notification-icon bg-primary bg-opacity-25 rounded-circle p-3 d-flex align-items-center justify-content-center">
+                                                <i class="bi bi-info-circle text-primary fs-4"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h5 class="mb-1 {% if not notification.is_read %}fw-bold{% endif %}">
+                                                    {{ notification.title }}
+                                                </h5>
+                                                <p class="mb-2 text-muted">{{ notification.message }}</p>
+                                            </div>
+                                            <div class="d-flex flex-column align-items-end gap-2">
+                                                {% if notification.priority == 'urgent' %}
+                                                    <span class="badge bg-danger fs-6">Urgent</span>
+                                                {% elif notification.priority == 'high' %}
+                                                    <span class="badge bg-warning text-dark fs-6">High</span>
+                                                {% elif notification.priority == 'medium' %}
+                                                    <span class="badge bg-info fs-6">Medium</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary fs-6">Low</span>
+                                                {% endif %}
+                                                
+                                                {% if not notification.is_read %}
+                                                <button class="btn btn-sm btn-outline-primary" onclick="markAsRead({{ notification.id }})">
+                                                    <i class="bi bi-check"></i> Mark as Read
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="text-muted small">
+                                                <i class="bi bi-clock"></i> {{ notification.created_at|date:"F d, Y g:i A" }}
+                                                {% if notification.is_read %}
+                                                    <span class="ms-3">
+                                                        <i class="bi bi-check text-success"></i> Read {{ notification.read_at|timesince }} ago
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            {% if notification.related_object_type == 'PMS' %}
+                                                <a href="{% url 'pms_detail' notification.related_object_id %}" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-eye"></i> View PMS Details
+                                                </a>
+                                            {% elif notification.related_object_type == 'Repair' %}
+                                                <a href="{% url 'repair_detail' notification.related_object_id %}" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-eye"></i> View Repair Details
+                                                </a>
+                                            {% elif notification.related_object_type == 'Vehicle' %}
+                                                <a href="{% url 'vehicle_detail' notification.related_object_id %}" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-eye"></i> View Vehicle Details
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-bell-slash text-muted" style="font-size: 4rem;"></i>
+                        <h4 class="text-muted mt-3">No Notifications</h4>
+                        <p class="text-muted">You don't have any notifications yet.</p>
+                        <button class="btn btn-primary" onclick="window.location.reload()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #dee2e6;
+    padding: 1.5rem;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.notification-card {
+    transition: all 0.3s ease;
+}
+
+.notification-card:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.unread-notification {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff;
+}
+
+.notification-icon {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.notification-card .btn {
+    transition: all 0.2s ease;
+}
+
+.notification-card .btn:hover {
+    transform: scale(1.05);
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.5em 0.75em;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+    .notification-icon {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .list-group-item {
+        padding: 1rem;
+    }
+    
+    .d-flex.flex-column {
+        flex-direction: row !important;
+        gap: 0.5rem !important;
+    }
+}
+</style>
+{% endblock %}

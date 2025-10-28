@@ -67,6 +67,31 @@
         .badge-completed { background-color: #28a745; }
         .badge-ongoing { background-color: #ffc107; color: #000; }
         
+        /* Notification Styles */
+        .notification-dropdown {
+            border: none;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-radius: 10px;
+        }
+        
+        .notification-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .notification-item .dropdown-item-text:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .notification-badge {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
         .card {
             border: none;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -191,6 +216,104 @@
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
+                    <!-- Notifications -->
+                    <li class="nav-item dropdown me-3">
+                        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell"></i>
+                            {% if unread_count and unread_count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                                {{ unread_count }}
+                                <span class="visually-hidden">unread notifications</span>
+                            </span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown" style="width: 400px; max-height: 500px; overflow-y: auto;">
+                            <li class="dropdown-header d-flex justify-content-between align-items-center bg-light">
+                                <span class="fw-bold">
+                                    <i class="bi bi-bell"></i> Notifications
+                                    {% if unread_count and unread_count > 0 %}
+                                    <span class="badge bg-danger ms-2">{{ unread_count }}</span>
+                                    {% endif %}
+                                </span>
+                                {% if unread_count and unread_count > 0 %}
+                                <button class="btn btn-sm btn-outline-primary" onclick="markAllAsRead()">
+                                    <i class="bi bi-check-all"></i> Mark all
+                                </button>
+                                {% endif %}
+                            </li>
+                            <li><hr class="dropdown-divider m-0"></li>
+                            {% if unread_notifications %}
+                                {% for notification in unread_notifications %}
+                                <li class="notification-item">
+                                    <div class="dropdown-item-text p-3 border-bottom" onclick="markAsRead({{ notification.id }})" style="cursor: pointer;">
+                                        <div class="d-flex align-items-start">
+                                            <div class="me-3 flex-shrink-0">
+                                                {% if notification.notification_type == 'pms_reminder' %}
+                                                    <div class="bg-warning bg-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                        <i class="bi bi-gear text-warning"></i>
+                                                    </div>
+                                                {% elif notification.notification_type == 'pms_overdue' %}
+                                                    <div class="bg-danger bg-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                        <i class="bi bi-exclamation-triangle text-danger"></i>
+                                                    </div>
+                                                {% elif notification.notification_type == 'repair_completed' %}
+                                                    <div class="bg-success bg-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                        <i class="bi bi-check-circle text-success"></i>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="bg-info bg-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                        <i class="bi bi-info-circle text-info"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                                    <h6 class="mb-0 fw-bold text-dark">{{ notification.title }}</h6>
+                                                    {% if notification.priority == 'urgent' %}
+                                                        <span class="badge bg-danger">Urgent</span>
+                                                    {% elif notification.priority == 'high' %}
+                                                        <span class="badge bg-warning text-dark">High</span>
+                                                    {% elif notification.priority == 'medium' %}
+                                                        <span class="badge bg-info">Medium</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Low</span>
+                                                    {% endif %}
+                                                </div>
+                                                <p class="mb-2 text-muted small">{{ notification.message|truncatewords:20 }}</p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-clock"></i> {{ notification.created_at|timesince }} ago
+                                                    </small>
+                                                    {% if notification.related_object_type == 'PMS' %}
+                                                        <a href="{% url 'pms_detail' notification.related_object_id %}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">
+                                                            <i class="bi bi-eye"></i> View
+                                                        </a>
+                                                    {% elif notification.related_object_type == 'Repair' %}
+                                                        <a href="{% url 'repair_detail' notification.related_object_id %}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">
+                                                            <i class="bi bi-eye"></i> View
+                                                        </a>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                                <li class="dropdown-item-text p-2 bg-light">
+                                    <a href="{% url 'notifications' %}" class="btn btn-outline-primary w-100">
+                                        <i class="bi bi-list-ul"></i> View all notifications
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="dropdown-item-text p-4 text-center">
+                                    <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                                    <p class="text-muted mb-0 mt-2">No new notifications</p>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    
+                    <!-- User Menu -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}
@@ -240,6 +363,72 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Notification JavaScript -->
+    <script>
+        function markAsRead(notificationId) {
+            fetch(`/notifications/${notificationId}/mark-read/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the notification from the dropdown
+                    const notificationItem = document.querySelector(`[onclick="markAsRead(${notificationId})"]`);
+                    if (notificationItem) {
+                        notificationItem.closest('li').remove();
+                    }
+                    
+                    // Update the badge count
+                    updateNotificationBadge();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+        function markAllAsRead() {
+            fetch('/notifications/mark-all-read/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the page to update the notification count
+                    window.location.reload();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+        function updateNotificationBadge() {
+            // This would typically make an AJAX call to get the updated count
+            // For now, we'll just hide the badge if no notifications are visible
+            const notificationItems = document.querySelectorAll('.notification-item');
+            const badge = document.querySelector('.badge');
+            
+            if (notificationItems.length === 0 && badge) {
+                badge.style.display = 'none';
+            }
+        }
+        
+        // Auto-refresh notifications every 30 seconds
+        setInterval(function() {
+            // Only refresh if the notification dropdown is not open
+            const dropdown = document.getElementById('notificationDropdown');
+            if (!dropdown.classList.contains('show')) {
+                // You could add AJAX call here to refresh notifications
+            }
+        }, 30000);
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>
