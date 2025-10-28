@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% csrf_token %}
 
 {% block title %}Notifications - Fleet Management{% endblock %}
 
@@ -56,7 +57,7 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div>
+                                            <div class="flex-grow-1">
                                                 <h5 class="mb-1 {% if not notification.is_read %}fw-bold{% endif %}">
                                                     {{ notification.title }}
                                                 </h5>
@@ -102,6 +103,10 @@
                                             {% elif notification.related_object_type == 'Vehicle' %}
                                                 <a href="{% url 'vehicle_detail' notification.related_object_id %}" class="btn btn-sm btn-primary">
                                                     <i class="bi bi-eye"></i> View Vehicle Details
+                                                </a>
+                                            {% elif notification.notification_type == 'general' and 'Report' in notification.title %}
+                                                <a href="{% url 'reports' %}" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-file-earmark-text"></i> View Report
                                                 </a>
                                             {% endif %}
                                         </div>
@@ -192,6 +197,198 @@
         flex-direction: row !important;
         gap: 0.5rem !important;
     }
+    }
+</style>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function markAsRead(notificationId) {
+    console.log('Marking notification as read:', notificationId);
+    const csrftoken = getCookie('csrftoken');
+    console.log('CSRF Token:', csrftoken);
+    
+    if (!csrftoken) {
+        console.error('CSRF token not found');
+        alert('Error: CSRF token not found. Please refresh the page and try again.');
+        return;
+    }
+    
+    fetch(`/fleet/notifications/${notificationId}/mark-read/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+            // Find the notification button
+            const notificationButton = document.querySelector(`[onclick="markAsRead(${notificationId})"]`);
+            if (notificationButton) {
+                const notificationCard = notificationButton.closest('.list-group-item');
+                if (notificationCard) {
+                    // Update the notification to show as read
+                    notificationCard.classList.remove('unread-notification');
+                    notificationCard.classList.add('read-notification');
+                    
+                    // Hide the mark as read button
+                    notificationButton.style.display = 'none';
+                    
+                    // Find or create the timestamp area and add read indicator
+                    const timestampArea = notificationCard.querySelector('.text-muted');
+                    if (timestampArea && !timestampArea.querySelector('.read-badge')) {
+                        const readBadge = document.createElement('span');
+                        readBadge.className = 'badge bg-success ms-3 read-badge';
+                        readBadge.innerHTML = '<i class="bi bi-check-circle"></i> Read';
+                        timestampArea.appendChild(readBadge);
+                    }
+                    
+                    // Update the notification title to remove bold (unread) styling
+                    const title = notificationCard.querySelector('h5');
+                    if (title) {
+                        title.classList.remove('fw-bold');
+                    }
+                }
+            }
+            
+            // Update the notification badge count in the navbar
+            updateNotificationBadgeCount();
+            
+            console.log('Notification marked as read successfully');
+        } else {
+            console.error('Server returned error:', data.error);
+            alert('Error: ' + (data.error || 'Failed to mark notification as read'));
+        }
+    })
+    .catch(error => {
+        console.error('Error marking notification as read:', error);
+        alert('Error: Failed to mark notification as read. Please try again.');
+    });
+}
+
+function markAllAsRead() {
+    console.log('Marking all notifications as read');
+    const csrftoken = getCookie('csrftoken');
+    console.log('CSRF Token:', csrftoken);
+    
+    if (!csrftoken) {
+        console.error('CSRF token not found');
+        alert('Error: CSRF token not found. Please refresh the page and try again.');
+        return;
+    }
+    
+    fetch('/fleet/notifications/mark-all-read/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+            // Update all notification cards on the page
+            document.querySelectorAll('.unread-notification').forEach(card => {
+                card.classList.remove('unread-notification');
+                card.classList.add('read-notification');
+                
+                // Hide all mark as read buttons
+                card.querySelectorAll('button[onclick^="markAsRead"]').forEach(btn => {
+                    btn.style.display = 'none';
+                });
+                
+                // Remove bold from title
+                const title = card.querySelector('h5');
+                if (title) {
+                    title.classList.remove('fw-bold');
+                }
+                
+                // Add read badges to all notifications
+                const timestampArea = card.querySelector('.text-muted');
+                if (timestampArea && !timestampArea.querySelector('.read-badge')) {
+                    const readBadge = document.createElement('span');
+                    readBadge.className = 'badge bg-success ms-3 read-badge';
+                    readBadge.innerHTML = '<i class="bi bi-check-circle"></i> Read';
+                    timestampArea.appendChild(readBadge);
+                }
+            });
+            
+            // Update the notification badge count in the navbar
+            updateNotificationBadgeCount();
+            
+            console.log('All notifications marked as read successfully');
+        } else {
+            console.error('Server returned error:', data.error);
+            alert('Error: ' + (data.error || 'Failed to mark all notifications as read'));
+        }
+    })
+    .catch(error => {
+        console.error('Error marking all notifications as read:', error);
+        alert('Error: Failed to mark all notifications as read. Please try again.');
+    });
+}
+
+function updateNotificationBadgeCount() {
+    // Count remaining unread notifications
+    const unreadCount = document.querySelectorAll('.unread-notification').length;
+    
+    // Update the navbar badge
+    const navbarBadge = document.querySelector('.notification-badge');
+    if (navbarBadge) {
+        if (unreadCount > 0) {
+            navbarBadge.textContent = unreadCount;
+            navbarBadge.style.display = 'block';
+        } else {
+            navbarBadge.style.display = 'none';
+        }
+    }
+    
+    // Update page header badge if it exists
+    const pageBadge = document.querySelector('.page-notification-badge');
+    if (pageBadge) {
+        if (unreadCount > 0) {
+            pageBadge.textContent = unreadCount;
+            pageBadge.style.display = 'inline';
+        } else {
+            pageBadge.style.display = 'none';
+        }
+    }
+}
+</script>
+
+<style>
+.read-notification {
+    background-color: #e8f5e8;
+    border-left: 4px solid #28a745;
 }
 </style>
 {% endblock %}

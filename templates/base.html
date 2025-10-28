@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     {% block extra_css %}{% endblock %}
     {% load static %}
+    {% csrf_token %}
     <style>
         :root {
             --denr-blue: #1e3a8a;
@@ -292,6 +293,10 @@
                                                         <a href="{% url 'repair_detail' notification.related_object_id %}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">
                                                             <i class="bi bi-eye"></i> View
                                                         </a>
+                                                    {% elif notification.notification_type == 'general' and 'Report' in notification.title %}
+                                                        <a href="{% url 'reports' %}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">
+                                                            <i class="bi bi-file-earmark-text"></i> View Report
+                                                        </a>
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -366,16 +371,49 @@
     
     <!-- Notification JavaScript -->
     <script>
+        // Function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
         function markAsRead(notificationId) {
-            fetch(`/notifications/${notificationId}/mark-read/`, {
+            console.log('Marking notification as read:', notificationId);
+            const csrftoken = getCookie('csrftoken');
+            console.log('CSRF Token:', csrftoken);
+            
+            if (!csrftoken) {
+                console.error('CSRF token not found');
+                alert('Error: CSRF token not found. Please refresh the page and try again.');
+                return;
+            }
+            
+            fetch(`/fleet/notifications/${notificationId}/mark-read/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'X-CSRFToken': csrftoken,
                     'Content-Type': 'application/json',
                 },
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
                 if (data.success) {
                     // Remove the notification from the dropdown
                     const notificationItem = document.querySelector(`[onclick="markAsRead(${notificationId})"]`);
@@ -383,39 +421,91 @@
                         notificationItem.closest('li').remove();
                     }
                     
-                    // Update the badge count
+                    // Update the badge count dynamically
                     updateNotificationBadge();
+                    
+                    console.log('Notification marked as read successfully');
+                } else {
+                    console.error('Server returned error:', data.error);
+                    alert('Error: ' + (data.error || 'Failed to mark notification as read'));
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error marking notification as read:', error);
+                alert('Error: Failed to mark notification as read. Please try again.');
+            });
         }
         
         function markAllAsRead() {
-            fetch('/notifications/mark-all-read/', {
+            console.log('Marking all notifications as read');
+            const csrftoken = getCookie('csrftoken');
+            console.log('CSRF Token:', csrftoken);
+            
+            if (!csrftoken) {
+                console.error('CSRF token not found');
+                alert('Error: CSRF token not found. Please refresh the page and try again.');
+                return;
+            }
+            
+            fetch('/fleet/notifications/mark-all-read/', {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'X-CSRFToken': csrftoken,
                     'Content-Type': 'application/json',
                 },
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
                 if (data.success) {
-                    // Reload the page to update the notification count
-                    window.location.reload();
+                    // Remove all notification items from dropdown
+                    document.querySelectorAll('.notification-item').forEach(item => {
+                        item.remove();
+                    });
+                    
+                    // Update the badge count
+                    updateNotificationBadge();
+                    
+                    console.log('All notifications marked as read successfully');
+                } else {
+                    console.error('Server returned error:', data.error);
+                    alert('Error: ' + (data.error || 'Failed to mark all notifications as read'));
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error marking all notifications as read:', error);
+                alert('Error: Failed to mark all notifications as read. Please try again.');
+            });
         }
         
         function updateNotificationBadge() {
-            // This would typically make an AJAX call to get the updated count
-            // For now, we'll just hide the badge if no notifications are visible
+            // Count remaining unread notifications in dropdown
             const notificationItems = document.querySelectorAll('.notification-item');
-            const badge = document.querySelector('.badge');
+            const badge = document.querySelector('.notification-badge');
             
-            if (notificationItems.length === 0 && badge) {
-                badge.style.display = 'none';
+            if (notificationItems.length === 0) {
+                // Hide the badge if no notifications remain
+                if (badge) {
+                    badge.style.display = 'none';
+                }
+            } else {
+                // Update the badge count
+                if (badge) {
+                    badge.textContent = notificationItems.length;
+                    badge.style.display = 'block';
+                }
+            }
+            
+            // Also update the unread count display if present
+            const unreadCountSpan = document.querySelector('[data-unread-count]');
+            if (unreadCountSpan) {
+                unreadCountSpan.textContent = notificationItems.length;
             }
         }
         

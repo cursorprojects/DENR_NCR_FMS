@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+import json
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
@@ -97,17 +99,7 @@ def dashboard(request):
     # Take top 5
     vehicles_near_pms = vehicles_near_pms[:5]
     
-    # Get unread notifications for the current user
-    unread_notifications = Notification.objects.filter(
-        user=request.user,
-        is_read=False
-    ).order_by('-created_at')[:10]  # Show latest 10 unread notifications
-    
-    # Get total unread count
-    unread_count = Notification.objects.filter(
-        user=request.user,
-        is_read=False
-    ).count()
+    # Note: unread_notifications and unread_count are now provided by context processor
     
     context = {
         'total_vehicles': total_vehicles,
@@ -118,8 +110,6 @@ def dashboard(request):
         'yearly_cost': yearly_cost,
         'recent_repairs': recent_repairs,
         'vehicles_near_pms': vehicles_near_pms,
-        'unread_notifications': unread_notifications,
-        'unread_count': unread_count,
     }
     
     return render(request, 'core/dashboard.html', context)
@@ -387,9 +377,13 @@ def notifications(request):
     return render(request, 'core/notifications.html', context)
 
 
+@csrf_exempt
 @login_required
 def mark_notification_read(request, notification_id):
     """Mark a specific notification as read"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'})
+    
     try:
         notification = Notification.objects.get(
             id=notification_id,
@@ -401,9 +395,13 @@ def mark_notification_read(request, notification_id):
         return JsonResponse({'success': False, 'error': 'Notification not found'})
 
 
+@csrf_exempt
 @login_required
 def mark_all_notifications_read(request):
     """Mark all notifications as read for the current user"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'})
+    
     Notification.objects.filter(
         user=request.user,
         is_read=False
