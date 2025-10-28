@@ -204,4 +204,86 @@
         </div>
     </div>
 </div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">PMS History</h5>
+                <a href="{% url 'pms_create' %}?vehicle={{ vehicle.id }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Add PMS Record
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Service Type</th>
+                                <th>Scheduled Date</th>
+                                <th>Completed Date</th>
+                                <th>Mileage</th>
+                                <th>Cost</th>
+                                <th>Status</th>
+                                <th>Provider</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pms in vehicle.pms_records.all %}
+                            <tr>
+                                <td>{{ pms.service_type }}</td>
+                                <td>{{ pms.scheduled_date|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if pms.completed_date %}
+                                        {{ pms.completed_date|date:"M d, Y" }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ pms.mileage_at_service|floatformat:0 }}</td>
+                                <td>
+                                    {% if pms.cost %}
+                                        {{ pms.cost|currency }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if pms.status == 'Scheduled' %}
+                                        <span class="badge bg-info">{{ pms.status }}</span>
+                                    {% elif pms.status == 'In Progress' %}
+                                        <span class="badge bg-warning">{{ pms.status }}</span>
+                                    {% elif pms.status == 'Completed' %}
+                                        <span class="badge bg-success">{{ pms.status }}</span>
+                                    {% elif pms.status == 'Overdue' %}
+                                        <span class="badge bg-danger">{{ pms.status }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ pms.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ pms.provider|default:"-" }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'pms_detail' pms.id %}" class="btn btn-sm btn-outline-info" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'pms_edit' pms.id %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">No PMS records found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

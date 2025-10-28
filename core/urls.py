@@ -49,6 +49,13 @@ urlpatterns = [
     path('repairs/<int:pk>/edit/', views.repair_edit, name='repair_edit'),
     path('repairs/<int:pk>/delete/', views.repair_delete, name='repair_delete'),
     
+    # PMS URLs
+    path('pms/', views.pms_list, name='pms_list'),
+    path('pms/<int:pk>/', views.pms_detail, name='pms_detail'),
+    path('pms/add/', views.pms_create, name='pms_create'),
+    path('pms/<int:pk>/edit/', views.pms_edit, name='pms_edit'),
+    path('pms/<int:pk>/delete/', views.pms_delete, name='pms_delete'),
+    
     # Operational Status
     path('status/', views.operational_status, name='operational_status'),
     

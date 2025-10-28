@@ -278,5 +278,37 @@ class RepairPartItem(models.Model):
     
     class Meta:
         ordering = ['-created_at']
-        verbose_name = 'Repair Part Item'
-        verbose_name_plural = 'Repair Part Items'
+
+
+class PMS(models.Model):
+    """Preventive Maintenance Service"""
+    STATUS_CHOICES = [
+        ('Scheduled', 'Scheduled'),
+        ('In Progress', 'In Progress'),
+        ('Completed', 'Completed'),
+        ('Overdue', 'Overdue'),
+        ('Cancelled', 'Cancelled'),
+    ]
+    
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='pms_records')
+    service_type = models.CharField(max_length=50, default='General Inspection', verbose_name='Service Type')
+    scheduled_date = models.DateField(verbose_name='Scheduled Date')
+    completed_date = models.DateField(null=True, blank=True, verbose_name='Completed Date')
+    mileage_at_service = models.IntegerField(default=0, verbose_name='Mileage at Service')
+    next_service_mileage = models.IntegerField(null=True, blank=True, verbose_name='Next Service Mileage')
+    cost = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)], verbose_name='Service Cost')
+    provider = models.CharField(max_length=200, blank=True, verbose_name='Service Provider')
+    technician = models.CharField(max_length=200, blank=True, verbose_name='Technician')
+    description = models.TextField(blank=True, verbose_name='Service Description')
+    notes = models.TextField(blank=True, verbose_name='Additional Notes')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Scheduled', verbose_name='Status')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.vehicle.plate_number} - {self.service_type} - {self.scheduled_date}"
+    
+    class Meta:
+        verbose_name = 'Preventive Maintenance Service'
+        verbose_name_plural = 'Preventive Maintenance Services'
+        ordering = ['-scheduled_date', '-created_at']

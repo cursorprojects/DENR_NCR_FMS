@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load currency_filters %}
+
+{% block title %}PMS Records{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">Preventive Maintenance Service Records</h3>
+                    <a href="{% url 'pms_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i> Add PMS Record
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- Filters -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <select class="form-select" id="statusFilter" onchange="filterTable()">
+                                <option value="">All Status</option>
+                                {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="vehicleFilter" onchange="filterTable()">
+                                <option value="">All Vehicles</option>
+                                {% for vehicle in vehicles %}
+                                <option value="{{ vehicle.id }}" {% if vehicle_filter == vehicle.id|stringformat:"s" %}selected{% endif %}>{{ vehicle.plate_number }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-secondary" onclick="clearFilters()">Clear Filters</button>
+                        </div>
+                    </div>
+
+                    <!-- PMS Records Table -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Vehicle</th>
+                                    <th>Service Type</th>
+                                    <th>Scheduled Date</th>
+                                    <th>Completed Date</th>
+                                    <th>Status</th>
+                                    <th>Mileage</th>
+                                    <th>Cost</th>
+                                    <th>Provider</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pms in pms_records %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'vehicle_detail' pms.vehicle.id %}">{{ pms.vehicle.plate_number }}</a>
+                                        <br><small class="text-muted">{{ pms.vehicle.make }} {{ pms.vehicle.model }}</small>
+                                    </td>
+                                    <td>{{ pms.service_type }}</td>
+                                    <td>{{ pms.scheduled_date|date:"M d, Y" }}</td>
+                                    <td>
+                                        {% if pms.completed_date %}
+                                            {{ pms.completed_date|date:"M d, Y" }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if pms.status == 'Scheduled' %}
+                                            <span class="badge bg-info">{{ pms.status }}</span>
+                                        {% elif pms.status == 'In Progress' %}
+                                            <span class="badge bg-warning">{{ pms.status }}</span>
+                                        {% elif pms.status == 'Completed' %}
+                                            <span class="badge bg-success">{{ pms.status }}</span>
+                                        {% elif pms.status == 'Overdue' %}
+                                            <span class="badge bg-danger">{{ pms.status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ pms.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ pms.mileage_at_service|floatformat:0 }}</td>
+                                    <td>
+                                        {% if pms.cost %}
+                                            {{ pms.cost|currency }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ pms.provider|default:"-" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'pms_detail' pms.id %}" class="btn btn-sm btn-outline-info" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'pms_edit' pms.id %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'pms_delete' pms.id %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">No PMS records found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterTable() {
+    const status = document.getElementById('statusFilter').value;
+    const vehicle = document.getElementById('vehicleFilter').value;
+    
+    const url = new URL(window.location);
+    url.searchParams.set('status', status);
+    url.searchParams.set('vehicle', vehicle);
+    
+    window.location.href = url.toString();
+}
+
+function clearFilters() {
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('vehicleFilter').value = '';
+    filterTable();
+}
+</script>
+{% endblock %}

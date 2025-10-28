@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.forms import inlineformset_factory
-from .models import Vehicle, Repair, Driver, Division, RepairShop, RepairPart, RepairPartItem
+from .models import Vehicle, Repair, Driver, Division, RepairShop, RepairPart, RepairPartItem, PMS
 
 User = get_user_model()
 
@@ -144,6 +144,69 @@ class DivisionForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+
+class PMSForm(forms.ModelForm):
+    # Make provider a dropdown of repair shops
+    repair_shop = forms.ModelChoiceField(
+        queryset=RepairShop.objects.none(),  # Will be set in __init__
+        required=False,
+        empty_label='Select a repair shop',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Service Provider'
+    )
+    
+    class Meta:
+        model = PMS
+        fields = [
+            'vehicle', 'service_type', 'scheduled_date', 'completed_date',
+            'mileage_at_service', 'next_service_mileage', 'cost',
+            'provider', 'technician', 'description', 'notes', 'status'
+        ]
+        widgets = {
+            'vehicle': forms.Select(attrs={'class': 'form-control'}),
+            'service_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'scheduled_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'completed_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'mileage_at_service': forms.NumberInput(attrs={'class': 'form-control'}),
+            'next_service_mileage': forms.NumberInput(attrs={'class': 'form-control'}),
+            'cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'provider': forms.HiddenInput(),  # Will be populated by repair_shop
+            'technician': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Set the queryset for repair_shop field
+        self.fields['repair_shop'].queryset = RepairShop.objects.filter(is_active=True)
+        
+        # Set default service type to 'General Inspection'
+        if not self.instance.pk or not self.instance.service_type:
+            self.fields['service_type'].initial = 'General Inspection'
+        
+        # If editing and there's a provider, try to find matching repair shop
+        if self.instance.pk and self.instance.provider:
+            try:
+                repair_shop = RepairShop.objects.get(name=self.instance.provider)
+                self.fields['repair_shop'].initial = repair_shop.id
+            except (RepairShop.DoesNotExist, RepairShop.MultipleObjectsReturned):
+                pass
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Save the repair shop name as provider
+        repair_shop = self.cleaned_data.get('repair_shop')
+        if repair_shop:
+            instance.provider = repair_shop.name
+        elif not instance.provider:  # If no repair shop selected, clear provider
+            instance.provider = ''
+        if commit:
+            instance.save()
+        return instance
 
 
 class UserForm(forms.ModelForm):

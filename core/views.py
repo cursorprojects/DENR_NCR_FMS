@@ -11,8 +11,8 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.contrib.auth import get_user_model
 import json
-from .models import Vehicle, Repair, Driver, Division, ActivityLog, RepairShop
-from .forms import VehicleForm, RepairForm, DriverForm, DivisionForm, UserForm, RepairShopForm, RepairPartItemFormSet
+from .models import Vehicle, Repair, Driver, Division, ActivityLog, RepairShop, PMS
+from .forms import VehicleForm, RepairForm, DriverForm, DivisionForm, UserForm, RepairShopForm, RepairPartItemFormSet, PMSForm
 
 User = get_user_model()
 
@@ -913,3 +913,121 @@ def repairshop_delete(request, pk):
         return redirect('repairshop_list')
     
     return render(request, 'core/cms/repairshop_delete.html', {'repair_shop': repair_shop})
+
+
+# PMS Views
+@login_required
+def pms_list(request):
+    """List all PMS records"""
+    pms_records = PMS.objects.all().order_by('-scheduled_date')
+    
+    # Filter by status
+    status_filter = request.GET.get('status')
+    if status_filter:
+        pms_records = pms_records.filter(status=status_filter)
+    
+    # Filter by vehicle
+    vehicle_filter = request.GET.get('vehicle')
+    if vehicle_filter:
+        pms_records = pms_records.filter(vehicle_id=vehicle_filter)
+    
+    context = {
+        'pms_records': pms_records,
+        'vehicles': Vehicle.objects.all(),
+        'status_choices': PMS.STATUS_CHOICES,
+        'status_filter': status_filter,
+        'vehicle_filter': vehicle_filter,
+    }
+    return render(request, 'core/pms_list.html', context)
+
+
+@login_required
+def pms_create(request):
+    """Create new PMS record"""
+    if request.method == 'POST':
+        form = PMSForm(request.POST)
+        if form.is_valid():
+            pms = form.save()
+            
+            # Log activity
+            ActivityLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='PMS',
+                object_id=pms.id,
+                description=f'Created PMS record for {pms.vehicle.plate_number} - {pms.service_type}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, 'PMS record created successfully!')
+            return redirect('pms_list')
+    else:
+        form = PMSForm()
+        # Pre-select vehicle if coming from vehicle detail
+        vehicle_id = request.GET.get('vehicle')
+        if vehicle_id:
+            try:
+                vehicle = Vehicle.objects.get(id=vehicle_id)
+                form.fields['vehicle'].initial = vehicle
+            except Vehicle.DoesNotExist:
+                pass
+    
+    return render(request, 'core/pms_form.html', {'form': form, 'title': 'Add PMS Record'})
+
+
+@login_required
+def pms_edit(request, pk):
+    """Edit PMS record"""
+    pms = get_object_or_404(PMS, pk=pk)
+    
+    if request.method == 'POST':
+        form = PMSForm(request.POST, instance=pms)
+        if form.is_valid():
+            pms = form.save()
+            
+            # Log activity
+            ActivityLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='PMS',
+                object_id=pms.id,
+                description=f'Updated PMS record for {pms.vehicle.plate_number} - {pms.service_type}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, 'PMS record updated successfully!')
+            return redirect('pms_list')
+    else:
+        form = PMSForm(instance=pms)
+    
+    return render(request, 'core/pms_form.html', {'form': form, 'title': 'Edit PMS Record'})
+
+
+@login_required
+def pms_detail(request, pk):
+    """View PMS record details"""
+    pms = get_object_or_404(PMS, pk=pk)
+    return render(request, 'core/pms_detail.html', {'pms': pms})
+
+
+@login_required
+def pms_delete(request, pk):
+    """Delete PMS record"""
+    pms = get_object_or_404(PMS, pk=pk)
+    
+    if request.method == 'POST':
+        # Log activity
+        ActivityLog.objects.create(
+            user=request.user,
+            action='delete',
+            model_name='PMS',
+            object_id=pms.id,
+            description=f'Deleted PMS record for {pms.vehicle.plate_number} - {pms.service_type}',
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        pms.delete()
+        messages.success(request, 'PMS record deleted successfully!')
+        return redirect('pms_list')
+    
+    return render(request, 'core/pms_delete.html', {'pms': pms})
