@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from .models import Vehicle, Repair, Driver, Department, RepairShop, RepairPart
+from django.forms import inlineformset_factory
+from .models import Vehicle, Repair, Driver, Department, RepairShop, RepairPart, RepairPartItem
 
 User = get_user_model()
 
@@ -35,7 +36,7 @@ class VehicleForm(forms.ModelForm):
         }
 
 
-class RepairForm(forms.ModelForm):
+class RepairPartItemForm(forms.ModelForm):
     UNIT_CHOICES = [
         ('', 'Select unit...'),
         ('pcs', 'Pieces (pcs)'),
@@ -57,24 +58,55 @@ class RepairForm(forms.ModelForm):
         ('roll', 'Roll'),
     ]
     
-    part_unit = forms.ChoiceField(choices=UNIT_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
+    unit = forms.ChoiceField(choices=UNIT_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
     
+    class Meta:
+        model = RepairPartItem
+        fields = ['part', 'quantity', 'unit', 'cost', 'additional_info', 'disposal_type']
+        widgets = {
+            'part': forms.Select(attrs={'class': 'form-control'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'additional_info': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'disposal_type': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only show active repair parts
+        self.fields['part'].queryset = RepairPart.objects.filter(is_active=True)
+        self.fields['part'].empty_label = "Select a part..."
+        self.fields['part'].label = "Part"
+        
+        # If editing, populate the unit field
+        if self.instance and self.instance.pk and self.instance.unit:
+            self.fields['unit'].initial = self.instance.unit
+
+
+# Create formset factory
+RepairPartItemFormSet = inlineformset_factory(
+    Repair, 
+    RepairPartItem, 
+    form=RepairPartItemForm,
+    extra=1,  # Start with 1 empty form
+    can_delete=True,
+    can_delete_extra=False
+)
+
+
+class RepairForm(forms.ModelForm):
     class Meta:
         model = Repair
         fields = [
-            'vehicle', 'date_of_repair', 'description', 'repairing_part',
-            'part_additional_info', 'part_quantity', 'part_unit', 'disposal_type',
-            'cost', 'repair_shop', 'technician', 'status'
+            'vehicle', 'date_of_repair', 'description',
+            'cost', 'labor_cost', 'repair_shop', 'technician', 'status'
         ]
         widgets = {
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
             'date_of_repair': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'repairing_part': forms.Select(attrs={'class': 'form-control'}),
-            'part_additional_info': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'part_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'disposal_type': forms.Select(attrs={'class': 'form-control'}),
             'cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'labor_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'repair_shop': forms.Select(attrs={'class': 'form-control'}),
             'technician': forms.TextInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
@@ -85,14 +117,6 @@ class RepairForm(forms.ModelForm):
         # Only show active repair shops in the dropdown
         self.fields['repair_shop'].queryset = RepairShop.objects.filter(is_active=True)
         self.fields['repair_shop'].empty_label = "Select a repair shop..."
-        # Only show active repair parts in the dropdown
-        self.fields['repairing_part'].queryset = RepairPart.objects.filter(is_active=True)
-        self.fields['repairing_part'].empty_label = "Select a part..."
-        self.fields['repairing_part'].label = "Part Replaced"
-        
-        # If editing, populate the unit field
-        if self.instance and self.instance.pk:
-            self.fields['part_unit'].initial = self.instance.part_unit
 
 
 class DriverForm(forms.ModelForm):

@@ -5,82 +5,178 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-8 offset-md-2">
+    <div class="col-md-10 offset-md-1">
         <div class="card">
             <div class="card-header">
                 <h4>{{ title }}</h4>
             </div>
             <div class="card-body">
-                <form method="post">
+                <form method="post" id="repair-form">
                     {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <h5 class="mb-3"><i class="bi bi-info-circle"></i> Basic Information</h5>
                     <div class="row">
-                        <div class="col-md-12 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">Vehicle</label>
                             {{ form.vehicle }}
+                            {% if form.vehicle.errors %}
+                                <div class="text-danger">{{ form.vehicle.errors }}</div>
+                            {% endif %}
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label class="form-label">Date of Repair</label>
                             {{ form.date_of_repair }}
+                            {% if form.date_of_repair.errors %}
+                                <div class="text-danger">{{ form.date_of_repair.errors }}</div>
+                            {% endif %}
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label class="form-label">Status</label>
                             {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger">{{ form.status.errors }}</div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Description</label>
                         {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors }}</div>
+                        {% endif %}
                     </div>
+                    
                     <hr>
+                    
+                    <!-- Part Information Table -->
                     <h5 class="mb-3"><i class="bi bi-gear"></i> Part Information</h5>
-                    <div class="mb-3">
-                        <label class="form-label">Part Replaced</label>
-                        {{ form.repairing_part }}
-                        <small class="form-text text-muted">Select a part from the list below</small>
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="parts-table">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 20%;">Part</th>
+                                    <th style="width: 10%;">Quantity</th>
+                                    <th style="width: 12%;">Unit</th>
+                                    <th style="width: 12%;">Cost</th>
+                                    <th style="width: 20%;">Additional Info</th>
+                                    <th style="width: 14%;">Disposal Type</th>
+                                    <th style="width: 8%;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="parts-tbody">
+                                {{ formset.management_form }}
+                                {% for form in formset %}
+                                    <tr class="part-row">
+                                        <td>
+                                            {{ form.part }}
+                                            {{ form.id }}
+                                            {% if form.part.errors %}
+                                                <div class="text-danger small">{{ form.part.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.quantity }}
+                                            {% if form.quantity.errors %}
+                                                <div class="text-danger small">{{ form.quantity.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.unit }}
+                                            {% if form.unit.errors %}
+                                                <div class="text-danger small">{{ form.unit.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">₱</span>
+                                                {{ form.cost }}
+                                            </div>
+                                            {% if form.cost.errors %}
+                                                <div class="text-danger small">{{ form.cost.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.additional_info }}
+                                            {% if form.additional_info.errors %}
+                                                <div class="text-danger small">{{ form.additional_info.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.disposal_type }}
+                                            {% if form.disposal_type.errors %}
+                                                <div class="text-danger small">{{ form.disposal_type.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {{ form.DELETE }}
+                                            {{ form.id }}
+                                                <button type="button" class="btn btn-sm btn-danger remove-row-btn" onclick="const row = this.closest('tr'); const checkbox = row.querySelector('input[type=checkbox][name*=\"-DELETE\"]'); if (checkbox) checkbox.checked = true; row.remove();">
+                                                    <i class="bi bi-trash"></i> Remove
+                                                </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Quantity</label>
-                            {{ form.part_quantity }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Unit of Measurement</label>
-                            {{ form.part_unit }}
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Additional Info</label>
-                        {{ form.part_additional_info }}
-                        <small class="form-text text-muted">Add any additional information about the part</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Disposal Type</label>
-                        {{ form.disposal_type }}
-                        <small class="form-text text-muted">Select how the replaced part is being disposed</small>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-primary" id="add-row-btn">
+                        <i class="bi bi-plus-circle"></i> Add Row
+                    </button>
+                    
                     <hr>
+                    
+                    <!-- Cost and Other Information -->
+                    <h5 class="mb-3"><i class="bi bi-currency-dollar"></i> Cost & Shop Information</h5>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Cost</label>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Parts Cost</label>
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
-                                {{ form.cost }}
+                                <input type="number" name="cost" id="id_cost" class="form-control" step="0.01" value="{{ form.cost.value|default:'' }}" readonly>
                             </div>
-                            <small class="form-text text-muted">Enter amount in Philippine Peso (₱)</small>
+                            <small class="form-text text-muted">Auto-calculated from parts table</small>
+                            {% if form.cost.errors %}
+                                <div class="text-danger">{{ form.cost.errors }}</div>
+                            {% endif %}
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Labor Cost</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                {{ form.labor_cost }}
+                            </div>
+                            <small class="form-text text-muted">Labor/service cost</small>
+                            {% if form.labor_cost.errors %}
+                                <div class="text-danger">{{ form.labor_cost.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label"><strong>Total Cost</strong></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-primary text-white">₱</span>
+                                <input type="number" id="total_cost" class="form-control" step="0.01" value="" readonly>
+                            </div>
+                            <small class="form-text text-muted">Parts + Labor cost</small>
+                        </div>
+                        <div class="col-md-3 mb-3">
                             <label class="form-label">Repair Shop</label>
                             {{ form.repair_shop }}
                             <small class="form-text text-muted">Select a repair shop from the list</small>
+                            {% if form.repair_shop.errors %}
+                                <div class="text-danger">{{ form.repair_shop.errors }}</div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Technician</label>
                         {{ form.technician }}
+                        {% if form.technician.errors %}
+                            <div class="text-danger">{{ form.technician.errors }}</div>
+                        {% endif %}
                     </div>
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                         <a href="{% url 'repair_list' %}" class="btn btn-secondary">Cancel</a>
                         <button type="submit" class="btn btn-primary">Save</button>
                     </div>
@@ -89,4 +185,229 @@
         </div>
     </div>
 </div>
+
+<script>
+let formCount = {{ formset.total_form_count }};
+let totalFormsInput = document.querySelector('[name="form-TOTAL_FORMS"]');
+let totalForms = totalFormsInput ? parseInt(totalFormsInput.value) : 0;
+
+// Function to calculate and update total parts cost
+function calculateTotalPartsCost() {
+    const costInputs = document.querySelectorAll('#parts-table input[name$="-cost"]');
+    let total = 0;
+    
+    console.log('Cost inputs found:', costInputs.length);
+    
+    costInputs.forEach(function(input) {
+        console.log('Processing input with name:', input.name, 'value:', input.value);
+        const row = input.closest('tr');
+        const checkbox = row.querySelector('input[type=checkbox][name*="-DELETE"]');
+        
+        // Only include cost if row is not marked for deletion
+        if (!checkbox || !checkbox.checked) {
+            const value = parseFloat(input.value) || 0;
+            console.log('Adding value:', value);
+            total += value;
+        }
+    });
+    
+    console.log('Total calculated:', total);
+    
+    // Update the parts cost field
+    const partsCostInput = document.querySelector('input[name="cost"]');
+    if (partsCostInput) {
+        partsCostInput.value = total.toFixed(2);
+    }
+    
+    // Calculate total cost (parts + labor)
+    calculateTotalCost();
+}
+
+// Function to calculate total cost (parts + labor)
+function calculateTotalCost() {
+    const partsCost = parseFloat(document.querySelector('input[name="cost"]').value) || 0;
+    const laborCost = parseFloat(document.querySelector('input[name="labor_cost"]').value) || 0;
+    const totalCost = partsCost + laborCost;
+    
+    const totalCostInput = document.getElementById('total_cost');
+    if (totalCostInput) {
+        totalCostInput.value = totalCost.toFixed(2);
+    }
+}
+
+// Add event listeners to all cost inputs
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate initial total
+    calculateTotalPartsCost();
+    
+    // Listen for changes in cost inputs
+    const partsTable = document.getElementById('parts-table');
+    if (partsTable) {
+        partsTable.addEventListener('input', function(e) {
+            if (e.target.name && e.target.name.endsWith('-cost')) {
+                calculateTotalPartsCost();
+            }
+        });
+        
+        // Listen for row removals
+        partsTable.addEventListener('DOMNodeRemoved', function() {
+            calculateTotalPartsCost();
+        });
+    }
+    
+    // Listen for changes in labor cost
+    const laborCostInput = document.querySelector('input[name="labor_cost"]');
+    if (laborCostInput) {
+        laborCostInput.addEventListener('input', function() {
+            calculateTotalCost();
+        });
+    }
+    
+    // Calculate initial total cost
+    calculateTotalCost();
+});
+
+document.getElementById('add-row-btn').addEventListener('click', function() {
+    const tbody = document.getElementById('parts-tbody');
+    const firstRow = tbody.querySelector('.part-row');
+    
+    if (firstRow) {
+        const newRow = firstRow.cloneNode(true);
+        
+        // Clear all input values in the new row
+        newRow.querySelectorAll('input, select, textarea').forEach(function(field) {
+            if (field.type !== 'checkbox') {
+                field.value = '';
+            }
+        });
+        
+        // Update form indices
+        newRow.innerHTML = newRow.innerHTML.replace(/form-\d+-/g, 'form-' + totalForms + '-');
+        
+        // Update the hidden form count field
+        const deleteCheckbox = newRow.querySelector('[type="checkbox"]');
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = false;
+        }
+        
+        // Ensure the remove button functionality is preserved
+        const removeBtn = newRow.querySelector('.remove-row-btn');
+        if (removeBtn) {
+            removeBtn.onclick = function() {
+                const row = this.closest('tr');
+                const checkbox = row.querySelector('input[type=checkbox][name*="-DELETE"]');
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+                row.remove();
+                calculateTotalPartsCost(); // Recalculate after removal
+            };
+        }
+        
+        tbody.appendChild(newRow);
+        totalForms++;
+        
+        // Update total forms count safely
+        if (totalFormsInput) {
+            totalFormsInput.value = totalForms;
+        }
+        
+        // Recalculate total after adding row
+        calculateTotalPartsCost();
+    }
+});
+
+// Handle delete checkboxes
+document.getElementById('repair-form').addEventListener('change', function(e) {
+    if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
+        const row = e.target.closest('.part-row');
+        if (e.target.checked) {
+            row.style.opacity = '0.5';
+            row.querySelectorAll('input, select, textarea').forEach(function(field) {
+                if (field !== e.target) {
+                    field.disabled = true;
+                }
+            });
+        } else {
+            row.style.opacity = '1';
+            row.querySelectorAll('input, select, textarea').forEach(function(field) {
+                field.disabled = false;
+            });
+        }
+    }
+});
+</script>
+
+<style>
+.part-row input,
+.part-row select,
+.part-row textarea {
+    border: 1px solid #dee2e6;
+    width: 100%;
+    background: white;
+    padding: 4px;
+}
+
+.part-row input:focus,
+.part-row select:focus,
+.part-row textarea:focus {
+    outline: none;
+    border: 1px solid #0d6efd;
+    background: white;
+    padding: 4px;
+}
+
+#parts-table tbody tr {
+    height: 70px;
+}
+
+#parts-table td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+input[type="checkbox"][name*="-DELETE"] {
+    display: none;
+}
+
+.remove-row-btn {
+    width: 100%;
+    white-space: nowrap;
+}
+
+input[name="cost"][readonly],
+#total_cost[readonly] {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+input[name="cost"][readonly]:focus,
+#total_cost[readonly]:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+#total_cost {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.part-row .input-group {
+    display: flex;
+    align-items: stretch;
+}
+
+.part-row .input-group-text {
+    border: 1px solid #dee2e6;
+}
+
+.part-row .input-group input {
+    border-left: none;
+}
+
+.part-row textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+</style>
 {% endblock %}

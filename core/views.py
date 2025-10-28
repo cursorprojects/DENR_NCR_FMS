@@ -12,7 +12,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth import get_user_model
 import json
 from .models import Vehicle, Repair, Driver, Department, ActivityLog, RepairShop
-from .forms import VehicleForm, RepairForm, DriverForm, DepartmentForm, UserForm, RepairShopForm
+from .forms import VehicleForm, RepairForm, DriverForm, DepartmentForm, UserForm, RepairShopForm, RepairPartItemFormSet
 
 User = get_user_model()
 
@@ -201,8 +201,11 @@ def repair_list(request):
 def repair_create(request):
     if request.method == 'POST':
         form = RepairForm(request.POST)
-        if form.is_valid():
+        formset = RepairPartItemFormSet(request.POST)
+        if form.is_valid() and formset.is_valid():
             repair = form.save()
+            formset.instance = repair
+            formset.save()
             # If vehicle is marked as damaged, update its status
             if 'damaged' in repair.description.lower() or repair.status == 'Ongoing':
                 repair.vehicle.status = 'Damaged'
@@ -211,8 +214,9 @@ def repair_create(request):
             return redirect('repair_list')
     else:
         form = RepairForm()
+        formset = RepairPartItemFormSet()
     
-    return render(request, 'core/repair_form.html', {'form': form, 'title': 'Add Repair Record'})
+    return render(request, 'core/repair_form.html', {'form': form, 'formset': formset, 'title': 'Add Repair Record'})
 
 
 @login_required
@@ -220,14 +224,17 @@ def repair_edit(request, pk):
     repair = get_object_or_404(Repair, pk=pk)
     if request.method == 'POST':
         form = RepairForm(request.POST, instance=repair)
-        if form.is_valid():
+        formset = RepairPartItemFormSet(request.POST, instance=repair)
+        if form.is_valid() and formset.is_valid():
             form.save()
+            formset.save()
             messages.success(request, 'Repair record updated successfully!')
             return redirect('repair_list')
     else:
         form = RepairForm(instance=repair)
+        formset = RepairPartItemFormSet(instance=repair)
     
-    return render(request, 'core/repair_form.html', {'form': form, 'title': 'Edit Repair Record'})
+    return render(request, 'core/repair_form.html', {'form': form, 'formset': formset, 'title': 'Edit Repair Record'})
 
 
 @login_required

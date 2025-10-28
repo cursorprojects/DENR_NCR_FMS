@@ -187,6 +187,8 @@ class Repair(models.Model):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='repairs')
     date_of_repair = models.DateField()
     description = models.TextField()
+    
+    # Keeping old fields for backward compatibility (will be phased out)
     repairing_part = models.ForeignKey(RepairPart, on_delete=models.SET_NULL, null=True, blank=True, related_name='repairs')
     part_additional_info = models.TextField(blank=True, verbose_name='Additional Info')
     part_quantity = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)], verbose_name='Quantity')
@@ -200,6 +202,7 @@ class Repair(models.Model):
     
     disposal_type = models.CharField(max_length=20, choices=DISPOSAL_CHOICES, default='normal', verbose_name='Disposal Type')
     cost = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    labor_cost = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)], verbose_name='Labor Cost')
     repair_shop = models.ForeignKey(RepairShop, on_delete=models.SET_NULL, null=True, blank=True)
     technician = models.CharField(max_length=200, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ongoing')
@@ -225,3 +228,24 @@ class Repair(models.Model):
     
     class Meta:
         ordering = ['-date_of_repair', '-created_at']
+
+
+class RepairPartItem(models.Model):
+    """Model to store multiple parts replaced per repair"""
+    repair = models.ForeignKey(Repair, on_delete=models.CASCADE, related_name='part_items')
+    part = models.ForeignKey(RepairPart, on_delete=models.SET_NULL, null=True, blank=True)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)], verbose_name='Quantity')
+    unit = models.CharField(max_length=50, blank=True, verbose_name='Unit')
+    cost = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)], verbose_name='Cost')
+    additional_info = models.TextField(blank=True, verbose_name='Additional Info')
+    disposal_type = models.CharField(max_length=20, choices=Repair.DISPOSAL_CHOICES, default='normal', verbose_name='Disposal Type')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.repair.vehicle.plate_number} - {self.part.name if self.part else 'Unknown'}"
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Repair Part Item'
+        verbose_name_plural = 'Repair Part Items'

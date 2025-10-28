@@ -88,40 +88,74 @@
                             <h6><i class="bi bi-file-text me-2"></i>Description</h6>
                             <p class="mb-4">{{ repair.description|linebreaks }}</p>
                             
-                            {% if repair.repairing_part %}
-                            <h6><i class="bi bi-gear me-2"></i>Part Replaced</h6>
-                            <p class="mb-2">
-                                <span class="badge bg-secondary fs-6">{{ repair.repairing_part.name }}</span>
-                            </p>
-                            
-                            {% if repair.part_quantity or repair.part_unit %}
-                            <div class="row mt-2 mb-2">
-                                {% if repair.part_quantity %}
-                                <div class="col-6">
-                                    <strong>Quantity:</strong> {{ repair.part_quantity }}
-                                </div>
-                                {% endif %}
-                                {% if repair.part_unit %}
-                                <div class="col-6">
-                                    <strong>Unit:</strong> {{ repair.part_unit }}
-                                </div>
-                                {% endif %}
+                            <!-- Parts Table -->
+                            {% if repair.part_items.exists or repair.repairing_part %}
+                            <hr>
+                            <h6><i class="bi bi-gear me-2"></i>Parts Replaced</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Part</th>
+                                            <th>Quantity</th>
+                                            <th>Unit</th>
+                                            <th>Cost</th>
+                                            <th>Additional Info</th>
+                                            <th>Disposal Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for part_item in repair.part_items.all %}
+                                        <tr>
+                                            <td>
+                                                {% if part_item.part %}
+                                                    <span class="badge bg-secondary">{{ part_item.part.name }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ part_item.quantity|default:"-" }}</td>
+                                            <td>{{ part_item.unit|default:"-" }}</td>
+                                            <td>
+                                                {% if part_item.cost %}
+                                                    ₱{{ part_item.cost|floatformat:2 }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td><small class="text-muted">{{ part_item.additional_info|default:"-" }}</small></td>
+                                            <td>
+                                                {% if part_item.disposal_type %}
+                                                    <span class="badge bg-info">{{ part_item.get_disposal_type_display }}</span>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        
+                                        <!-- Backward compatibility: show old part info -->
+                                        {% if repair.repairing_part and not repair.part_items.exists %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ repair.repairing_part.name }}</span>
+                                            </td>
+                                            <td>{{ repair.part_quantity|default:"-" }}</td>
+                                            <td>{{ repair.part_unit|default:"-" }}</td>
+                                            <td>-</td>
+                                            <td><small class="text-muted">{{ repair.part_additional_info|default:"-" }}</small></td>
+                                            <td>
+                                                {% if repair.disposal_type %}
+                                                    <span class="badge bg-info">{{ repair.get_disposal_type_display }}</span>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
                             </div>
-                            {% endif %}
-                            
-                            {% if repair.part_additional_info %}
-                            <div class="mb-2">
-                                <strong>Additional Info:</strong><br>
-                                <p class="text-muted">{{ repair.part_additional_info|linebreaks }}</p>
-                            </div>
-                            {% endif %}
-                            
-                            {% if repair.disposal_type %}
-                            <div class="mb-2">
-                                <strong>Disposal Type:</strong> 
-                                <span class="badge bg-info">{{ repair.get_disposal_type_display }}</span>
-                            </div>
-                            {% endif %}
                             {% endif %}
                         </div>
                     </div>
