@@ -167,6 +167,61 @@
                         </div>
                     </div>
 
+                    <!-- Parts Replaced and Repair Record -->
+                    {% if pms.repair %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <h5><i class="bi bi-gear"></i> Parts Replaced</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Part</th>
+                                            <th>Quantity</th>
+                                            <th>Unit</th>
+                                            <th>Cost</th>
+                                            <th>Additional Info</th>
+                                            <th>Disposal Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for part_item in pms.repair.part_items.all %}
+                                        <tr>
+                                            <td>{{ part_item.part.name|default:"-" }}</td>
+                                            <td>{{ part_item.quantity|floatformat:2 }}</td>
+                                            <td>{{ part_item.unit|default:"-" }}</td>
+                                            <td>{{ part_item.cost|currency }}</td>
+                                            <td>{{ part_item.additional_info|default:"-" }}</td>
+                                            <td>{{ part_item.get_disposal_type_display }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">No parts replaced</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Link to Repair Record -->
+                            <div class="alert alert-info mt-3">
+                                <strong><i class="bi bi-info-circle"></i> Repair Record:</strong>
+                                This PMS created a repair record. 
+                                <a href="{% url 'repair_detail' pms.repair.id %}" class="btn btn-sm btn-outline-primary ms-2">
+                                    <i class="bi bi-link-45deg"></i> View Repair Details
+                                </a>
+                                {% if pms.repair.cost or pms.repair.labor_cost %}
+                                <br><small class="mt-2 d-block">
+                                    <strong>Total Cost:</strong> {{ pms.repair.total_cost|currency }}
+                                    (Parts: {{ pms.repair.cost|currency }}, Labor: {{ pms.repair.labor_cost|currency }})
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Description and Notes -->
                     {% if pms.description or pms.notes %}
                     <hr>
