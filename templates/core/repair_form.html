@@ -127,13 +127,14 @@
                     <hr>
                     
                     <!-- Cost and Other Information -->
-                    <h5 class="mb-3"><i class="bi bi-currency-dollar"></i> Cost & Shop Information</h5>
+                    <h5 class="mb-3">Cost & Shop Information</h5>
                     <div class="row">
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Parts Cost</label>
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
-                                <input type="number" name="cost" id="id_cost" class="form-control" step="0.01" value="{{ form.cost.value|default:'' }}" readonly>
+                                <input type="text" id="cost_display" class="form-control" value="" readonly>
+                                <input type="hidden" name="cost" id="id_cost" value="">
                             </div>
                             <small class="form-text text-muted">Auto-calculated from parts table</small>
                             {% if form.cost.errors %}
@@ -155,7 +156,7 @@
                             <label class="form-label"><strong>Total Cost</strong></label>
                             <div class="input-group">
                                 <span class="input-group-text bg-primary text-white">₱</span>
-                                <input type="number" id="total_cost" class="form-control" step="0.01" value="" readonly>
+                                <input type="text" id="total_cost" class="form-control" value="" readonly>
                             </div>
                             <small class="form-text text-muted">Parts + Labor cost</small>
                         </div>
@@ -191,6 +192,37 @@ let formCount = {{ formset.total_form_count }};
 let totalFormsInput = document.querySelector('[name="form-TOTAL_FORMS"]');
 let totalForms = totalFormsInput ? parseInt(totalFormsInput.value) : 0;
 
+// Function to format number with thousand separator
+function formatNumber(num) {
+    return parseFloat(num || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// Function to parse formatted number back to float
+function parseFormattedNumber(str) {
+    return parseFloat(str.replace(/,/g, '')) || 0;
+}
+
+// Function to format input on blur
+function formatInput(input) {
+    const value = input.value.trim();
+    if (value && value !== '') {
+        // Remove any existing commas and parse
+        const cleanValue = value.replace(/,/g, '');
+        const numValue = parseFloat(cleanValue);
+        
+        // Only format if it's a valid positive number
+        if (!isNaN(numValue) && numValue >= 0) {
+            input.value = numValue.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+    }
+}
+
 // Function to calculate and update total parts cost
 function calculateTotalPartsCost() {
     const costInputs = document.querySelectorAll('#parts-table input[name$="-cost"]');
@@ -205,7 +237,7 @@ function calculateTotalPartsCost() {
         
         // Only include cost if row is not marked for deletion
         if (!checkbox || !checkbox.checked) {
-            const value = parseFloat(input.value) || 0;
+            const value = parseFormattedNumber(input.value);
             console.log('Adding value:', value);
             total += value;
         }
@@ -213,10 +245,13 @@ function calculateTotalPartsCost() {
     
     console.log('Total calculated:', total);
     
-    // Update the parts cost field
-    const partsCostInput = document.querySelector('input[name="cost"]');
-    if (partsCostInput) {
-        partsCostInput.value = total.toFixed(2);
+    // Update the parts cost field (format with commas)
+    const partsCostDisplay = document.getElementById('cost_display');
+    const partsCostHidden = document.querySelector('input[name="cost"]');
+    if (partsCostDisplay && partsCostHidden) {
+        const formatted = total.toFixed(2);
+        partsCostDisplay.value = formatNumber(formatted);
+        partsCostHidden.value = formatted; // Store numeric value for form submission
     }
     
     // Calculate total cost (parts + labor)
@@ -225,20 +260,110 @@ function calculateTotalPartsCost() {
 
 // Function to calculate total cost (parts + labor)
 function calculateTotalCost() {
+    // Get values from hidden inputs
     const partsCost = parseFloat(document.querySelector('input[name="cost"]').value) || 0;
-    const laborCost = parseFloat(document.querySelector('input[name="labor_cost"]').value) || 0;
+    const laborCostStr = document.querySelector('input[name="labor_cost"]').value || '0';
+    const laborCost = parseFormattedNumber(laborCostStr);
+    
     const totalCost = partsCost + laborCost;
     
     const totalCostInput = document.getElementById('total_cost');
     if (totalCostInput) {
-        totalCostInput.value = totalCost.toFixed(2);
+        const formatted = totalCost.toFixed(2);
+        // Format with commas for display
+        totalCostInput.value = formatNumber(formatted);
     }
+}
+
+// Format input while typing (real-time comma formatting)
+function formatWhileTyping(input) {
+    input.addEventListener('input', function(e) {
+        const cursorPosition = e.target.selectionStart;
+        const value = e.target.value;
+        
+        // Remove all commas to get clean number
+        const cleanValue = value.replace(/,/g, '');
+        
+        // Allow decimal point and partial numbers
+        if (cleanValue === '' || cleanValue === '.' || cleanValue.endsWith('.') || 
+            (!isNaN(cleanValue) && cleanValue >= 0)) {
+            
+            // Don't format if it's just a decimal point or ends with decimal
+            if (cleanValue === '.' || cleanValue.endsWith('.')) {
+                return;
+            }
+            
+            // Don't format if it's empty
+            if (cleanValue === '') {
+                return;
+            }
+            
+            // Format with commas
+            const formatted = parseFloat(cleanValue).toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
+            
+            // Update the value
+            e.target.value = formatted;
+            
+            // Restore cursor position (account for added commas)
+            const newCursorPosition = cursorPosition + (formatted.length - value.length);
+            e.target.setSelectionRange(newCursorPosition, newCursorPosition);
+        }
+    });
+}
+
+// Restrict decimal inputs to only allow numbers and decimal point
+function restrictDecimalInput(input) {
+    input.addEventListener('keydown', function(e) {
+        // Allow: backspace, delete, tab, escape, enter
+        if ([8, 9, 27, 13, 46].indexOf(e.keyCode) !== -1 ||
+            // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+            (e.keyCode === 65 && e.ctrlKey === true) ||
+            (e.keyCode === 67 && e.ctrlKey === true) ||
+            (e.keyCode === 86 && e.ctrlKey === true) ||
+            (e.keyCode === 88 && e.ctrlKey === true) ||
+            // Allow: home, end, left, right
+            (e.keyCode >= 35 && e.keyCode <= 39)) {
+            return;
+        }
+        
+        // Allow decimal point (both keypad and main keyboard)
+        if (e.keyCode === 190 || e.keyCode === 110) {
+            // Only allow one decimal point
+            if (this.value.indexOf('.') !== -1) {
+                e.preventDefault();
+            }
+            return;
+        }
+        
+        // Allow numbers (both main keyboard and keypad)
+        if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) {
+            return;
+        }
+        
+        // Block everything else
+        e.preventDefault();
+    });
 }
 
 // Add event listeners to all cost inputs
 document.addEventListener('DOMContentLoaded', function() {
     // Calculate initial total
     calculateTotalPartsCost();
+    
+    // Restrict and format decimal inputs
+    document.querySelectorAll('.decimal-input').forEach(function(input) {
+        restrictDecimalInput(input);
+        formatWhileTyping(input);
+    });
+    
+    // Restrict and format cost inputs in parts table
+    document.querySelectorAll('#parts-table input[name$="-cost"]').forEach(function(input) {
+        restrictDecimalInput(input);
+        formatWhileTyping(input);
+    });
     
     // Listen for changes in cost inputs
     const partsTable = document.getElementById('parts-table');
@@ -248,6 +373,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 calculateTotalPartsCost();
             }
         });
+        
+        // Format cost inputs on blur
+        partsTable.addEventListener('blur', function(e) {
+            if (e.target.name && e.target.name.endsWith('-cost')) {
+                formatInput(e.target);
+            }
+        }, true);
         
         // Listen for row removals
         partsTable.addEventListener('DOMNodeRemoved', function() {
@@ -259,6 +391,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const laborCostInput = document.querySelector('input[name="labor_cost"]');
     if (laborCostInput) {
         laborCostInput.addEventListener('input', function() {
+            calculateTotalCost();
+        });
+        
+        // Format labor cost on blur
+        laborCostInput.addEventListener('blur', function() {
+            formatInput(this);
             calculateTotalCost();
         });
     }
@@ -302,6 +440,17 @@ document.getElementById('add-row-btn').addEventListener('click', function() {
                 row.remove();
                 calculateTotalPartsCost(); // Recalculate after removal
             };
+        }
+        
+        // Add formatting and restriction to new cost input
+        const newCostInput = newRow.querySelector('input[name$="-cost"]');
+        if (newCostInput) {
+            restrictDecimalInput(newCostInput);
+            formatWhileTyping(newCostInput);
+            newCostInput.addEventListener('blur', function() {
+                formatInput(this);
+                calculateTotalPartsCost();
+            });
         }
         
         tbody.appendChild(newRow);
@@ -375,21 +524,26 @@ input[type="checkbox"][name*="-DELETE"] {
     white-space: nowrap;
 }
 
-input[name="cost"][readonly],
-#total_cost[readonly] {
+input[name="cost"][readonly] {
     background-color: #f8f9fa;
     cursor: not-allowed;
 }
 
-input[name="cost"][readonly]:focus,
-#total_cost[readonly]:focus {
+input[name="cost"][readonly]:focus {
     border-color: #0d6efd;
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
 #total_cost {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
     font-weight: bold;
     font-size: 1.1rem;
+}
+
+#total_cost:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
 .part-row .input-group {

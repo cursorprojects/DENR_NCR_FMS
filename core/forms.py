@@ -66,7 +66,7 @@ class RepairPartItemForm(forms.ModelForm):
         widgets = {
             'part': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cost': forms.TextInput(attrs={'class': 'form-control decimal-input'}),
             'additional_info': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'disposal_type': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -106,7 +106,7 @@ class RepairForm(forms.ModelForm):
             'date_of_repair': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'labor_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'labor_cost': forms.TextInput(attrs={'class': 'form-control decimal-input'}),
             'repair_shop': forms.Select(attrs={'class': 'form-control'}),
             'technician': forms.TextInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
