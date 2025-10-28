@@ -129,7 +129,7 @@
                     <!-- Cost and Other Information -->
                     <h5 class="mb-3">Cost & Shop Information</h5>
                     <div class="row">
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Parts Cost</label>
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
@@ -141,7 +141,7 @@
                                 <div class="text-danger">{{ form.cost.errors }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Labor Cost</label>
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
@@ -152,7 +152,7 @@
                                 <div class="text-danger">{{ form.labor_cost.errors }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label"><strong>Total Cost</strong></label>
                             <div class="input-group">
                                 <span class="input-group-text bg-primary text-white">₱</span>
@@ -160,7 +160,9 @@
                             </div>
                             <small class="form-text text-muted">Parts + Labor cost</small>
                         </div>
-                        <div class="col-md-3 mb-3">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">Repair Shop</label>
                             {{ form.repair_shop }}
                             <small class="form-text text-muted">Select a repair shop from the list</small>
@@ -168,13 +170,13 @@
                                 <div class="text-danger">{{ form.repair_shop.errors }}</div>
                             {% endif %}
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Technician</label>
-                        {{ form.technician }}
-                        {% if form.technician.errors %}
-                            <div class="text-danger">{{ form.technician.errors }}</div>
-                        {% endif %}
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Technician</label>
+                            {{ form.technician }}
+                            {% if form.technician.errors %}
+                                <div class="text-danger">{{ form.technician.errors }}</div>
+                            {% endif %}
+                        </div>
                     </div>
                     
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
