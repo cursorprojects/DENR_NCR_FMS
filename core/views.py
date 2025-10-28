@@ -12,7 +12,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth import get_user_model
 import json
 from .models import Vehicle, Repair, Driver, Division, ActivityLog, RepairShop, PMS
-from .forms import VehicleForm, RepairForm, DriverForm, DivisionForm, UserForm, RepairShopForm, RepairPartItemFormSet, PMSForm
+from .forms import VehicleForm, RepairForm, DriverForm, DivisionForm, UserForm, RepairShopForm, RepairPartItemFormSet, PMSForm, PMSRepairPartItemFormSet
 
 User = get_user_model()
 
@@ -946,10 +946,59 @@ def pms_create(request):
     """Create new PMS record"""
     if request.method == 'POST':
         form = PMSForm(request.POST)
-        if form.is_valid():
+        formset = PMSRepairPartItemFormSet(request.POST)
+        
+        if form.is_valid() and formset.is_valid():
             pms = form.save()
             
-            # Log activity
+            # Check if user selected any parts to replace
+            has_parts = False
+            parts_cost = 0
+            
+            for part_form in formset:
+                if part_form.cleaned_data and not part_form.cleaned_data.get('DELETE', False):
+                    has_parts = True
+                    cost = part_form.cleaned_data.get('cost') or 0
+                    parts_cost += float(cost)
+            
+            # If parts were replaced, create a repair record
+            if has_parts:
+                from django.utils import timezone
+                
+                # Get PMS service cost to use as labor cost
+                pms_service_cost = float(pms.cost) if pms.cost else 0
+                
+                # Create repair record for PMS
+                repair = Repair.objects.create(
+                    vehicle=pms.vehicle,
+                    date_of_repair=pms.scheduled_date,
+                    description=f"PMS: {pms.service_type}",
+                    cost=parts_cost,
+                    labor_cost=pms_service_cost,
+                    repair_shop=form.cleaned_data.get('repair_shop'),
+                    technician=pms.technician,
+                    status='Completed'
+                )
+                
+                # Link repair to PMS
+                pms.repair = repair
+                pms.save()
+                
+                # Save formset with the repair
+                formset.instance = repair
+                formset.save()
+                
+                # Log activity
+                ActivityLog.objects.create(
+                    user=request.user,
+                    action='create',
+                    model_name='Repair',
+                    object_id=repair.id,
+                    description=f'Created repair record for PMS: {pms.vehicle.plate_number}',
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+            
+            # Log activity for PMS
             ActivityLog.objects.create(
                 user=request.user,
                 action='create',
@@ -963,6 +1012,7 @@ def pms_create(request):
             return redirect('pms_list')
     else:
         form = PMSForm()
+        formset = PMSRepairPartItemFormSet()
         # Pre-select vehicle if coming from vehicle detail
         vehicle_id = request.GET.get('vehicle')
         if vehicle_id:
@@ -972,7 +1022,7 @@ def pms_create(request):
             except Vehicle.DoesNotExist:
                 pass
     
-    return render(request, 'core/pms_form.html', {'form': form, 'title': 'Add PMS Record'})
+    return render(request, 'core/pms_form.html', {'form': form, 'formset': formset, 'title': 'Add PMS Record'})
 
 
 @login_required
@@ -980,12 +1030,65 @@ def pms_edit(request, pk):
     """Edit PMS record"""
     pms = get_object_or_404(PMS, pk=pk)
     
+    # Get the associated repair if it exists
+    repair = pms.repair
+    
     if request.method == 'POST':
         form = PMSForm(request.POST, instance=pms)
-        if form.is_valid():
+        formset = PMSRepairPartItemFormSet(request.POST, instance=repair) if repair else PMSRepairPartItemFormSet(request.POST)
+        
+        if form.is_valid() and formset.is_valid():
             pms = form.save()
             
-            # Log activity
+            # Check if user selected any parts to replace
+            has_parts = False
+            parts_cost = 0
+            
+            for part_form in formset:
+                if part_form.cleaned_data and not part_form.cleaned_data.get('DELETE', False):
+                    has_parts = True
+                    cost = part_form.cleaned_data.get('cost') or 0
+                    parts_cost += float(cost)
+            
+            # If parts were selected and no repair exists, create one
+            if has_parts and not repair:
+                # Get PMS service cost to use as labor cost
+                pms_service_cost = float(pms.cost) if pms.cost else 0
+                
+                repair = Repair.objects.create(
+                    vehicle=pms.vehicle,
+                    date_of_repair=pms.scheduled_date,
+                    description=f"PMS: {pms.service_type}",
+                    cost=parts_cost,
+                    labor_cost=pms_service_cost,
+                    repair_shop=form.cleaned_data.get('repair_shop'),
+                    technician=pms.technician,
+                    status='Completed'
+                )
+                pms.repair = repair
+                pms.save()
+                
+                formset.instance = repair
+                formset.save()
+                
+                # Log activity for repair
+                ActivityLog.objects.create(
+                    user=request.user,
+                    action='create',
+                    model_name='Repair',
+                    object_id=repair.id,
+                    description=f'Created repair record for PMS: {pms.vehicle.plate_number}',
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+            elif repair:
+                # Update existing repair - set parts cost and labor cost
+                pms_service_cost = float(pms.cost) if pms.cost else 0
+                repair.cost = parts_cost
+                repair.labor_cost = pms_service_cost
+                repair.save()
+                formset.save()
+            
+            # Log activity for PMS
             ActivityLog.objects.create(
                 user=request.user,
                 action='update',
@@ -999,8 +1102,16 @@ def pms_edit(request, pk):
             return redirect('pms_list')
     else:
         form = PMSForm(instance=pms)
+        if repair:
+            formset = PMSRepairPartItemFormSet(instance=repair)
+            if repair.part_items.count() == 0:
+                formset.extra = 1
+            else:
+                formset.extra = 0
+        else:
+            formset = PMSRepairPartItemFormSet()
     
-    return render(request, 'core/pms_form.html', {'form': form, 'title': 'Edit PMS Record'})
+    return render(request, 'core/pms_form.html', {'form': form, 'formset': formset, 'title': 'Edit PMS Record', 'pms': pms, 'repair': repair})
 
 
 @login_required

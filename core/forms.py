@@ -88,12 +88,22 @@ class RepairPartItemForm(forms.ModelForm):
             self.fields['unit'].initial = self.instance.unit
 
 
-# Create formset factory
+# Create formset factory for Repair
 RepairPartItemFormSet = inlineformset_factory(
     Repair, 
     RepairPartItem, 
     form=RepairPartItemForm,
     extra=0,  # No extra forms by default
+    can_delete=True,
+    can_delete_extra=False
+)
+
+# Create formset factory for PMS (same as Repair - both use RepairPartItem)
+PMSRepairPartItemFormSet = inlineformset_factory(
+    Repair, 
+    RepairPartItem, 
+    form=RepairPartItemForm,
+    extra=1,  # Start with 1 empty form for convenience
     can_delete=True,
     can_delete_extra=False
 )
@@ -165,7 +175,7 @@ class PMSForm(forms.ModelForm):
         ]
         widgets = {
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
-            'service_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'service_type': forms.HiddenInput(),  # Always set to 'General Inspection'
             'scheduled_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'completed_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'mileage_at_service': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -184,9 +194,9 @@ class PMSForm(forms.ModelForm):
         # Set the queryset for repair_shop field
         self.fields['repair_shop'].queryset = RepairShop.objects.filter(is_active=True)
         
-        # Set default service type to 'General Inspection'
-        if not self.instance.pk or not self.instance.service_type:
-            self.fields['service_type'].initial = 'General Inspection'
+        # Always set service type to 'General Inspection'
+        self.fields['service_type'].initial = 'General Inspection'
+        self.fields['service_type'].required = False
         
         # If editing and there's a provider, try to find matching repair shop
         if self.instance.pk and self.instance.provider:

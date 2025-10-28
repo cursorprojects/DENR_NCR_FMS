@@ -124,15 +124,98 @@
                             </div>
                         </div>
 
+                        <!-- Parts to Replace -->
+                        <hr class="my-4">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h5><i class="bi bi-gear"></i> Parts to Replace (Optional)</h5>
+                                <p class="text-muted small">If parts were replaced during this PMS, add them below. This will create a repair record.</p>
+                            </div>
+                        </div>
+
+                        <div id="parts-container">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="parts-table">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th style="width: 20%;">Part</th>
+                                            <th style="width: 10%;">Quantity</th>
+                                            <th style="width: 12%;">Unit</th>
+                                            <th style="width: 12%;">Cost</th>
+                                            <th style="width: 20%;">Additional Info</th>
+                                            <th style="width: 14%;">Disposal Type</th>
+                                            <th style="width: 8%;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="parts-tbody">
+                                        {{ formset.management_form }}
+                                        {% for part_form in formset %}
+                                        <tr class="part-form" {% if not part_form.part.value %}style="display: none;"{% endif %}>
+                                            <td>
+                                                {{ part_form.part }}
+                                                {{ part_form.id }}
+                                                {% if part_form.part.errors %}
+                                                    <div class="text-danger small">{{ part_form.part.errors }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ part_form.quantity }}
+                                                {% if part_form.quantity.errors %}
+                                                    <div class="text-danger small">{{ part_form.quantity.errors }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ part_form.unit }}
+                                                {% if part_form.unit.errors %}
+                                                    <div class="text-danger small">{{ part_form.unit.errors }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text">₱</span>
+                                                    {{ part_form.cost }}
+                                                </div>
+                                                {% if part_form.cost.errors %}
+                                                    <div class="text-danger small">{{ part_form.cost.errors }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ part_form.additional_info }}
+                                                {% if part_form.additional_info.errors %}
+                                                    <div class="text-danger small">{{ part_form.additional_info.errors }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ part_form.disposal_type }}
+                                                {% if part_form.disposal_type.errors %}
+                                                    <div class="text-danger small">{{ part_form.disposal_type.errors }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                {{ part_form.DELETE }}
+                                                <button type="button" class="btn btn-sm btn-danger remove-part">
+                                                    <i class="bi bi-trash"></i> Remove
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary" id="add-part-btn">
+                                <i class="bi bi-plus-circle"></i> Add Row
+                            </button>
+                        </div>
+
                         <!-- Form Actions -->
-                        <div class="row">
+                        <div class="row mt-4">
                             <div class="col-12">
                                 <div class="d-flex justify-content-between">
                                     <a href="{% url 'pms_list' %}" class="btn btn-secondary">
-                                        <i class="bi bi-arrow-left"></i> Back to PMS List
+                                        <i class="bi bi-arrow-left me-1"></i> Back to PMS List
                                     </a>
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-save"></i> Save PMS Record
+                                        <i class="bi bi-save me-1"></i> Save PMS Record
                                     </button>
                                 </div>
                             </div>
@@ -143,4 +226,263 @@
         </div>
     </div>
 </div>
+
+<!-- jQuery (required for Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- Bootstrap Select2 theme (optional, for better styling) -->
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+<script>
+// Initialize Select2 for part dropdowns on page load
+$(document).ready(function() {
+    $('select[name*="-part"]').select2({
+        placeholder: 'Select a part...',
+        allowClear: true,
+        width: '100%',
+        dropdownAutoWidth: true
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const partsFormset = document.getElementById('parts-tbody');
+    const addPartBtn = document.getElementById('add-part-btn');
+    const totalFormsInput = document.querySelector('#id_part_items-TOTAL_FORMS');
+    
+    if (!totalFormsInput) return; // Exit if formset doesn't exist
+    
+    let formCount = parseInt(totalFormsInput.value);
+    
+    // Add new part form
+    addPartBtn.addEventListener('click', function() {
+        // Find the first part row as template
+        const firstPartRow = partsFormset.querySelector('.part-form');
+        if (!firstPartRow) return;
+        
+        // Destroy Select2 on the template row before cloning
+        const templateSelect = firstPartRow.querySelector('select[name*="-part"]');
+        if (templateSelect && $(templateSelect).hasClass('select2-hidden-accessible')) {
+            $(templateSelect).select2('destroy');
+        }
+        
+        // Clone the row
+        const newRow = firstPartRow.cloneNode(true);
+        
+        // Update form index
+        newRow.innerHTML = newRow.innerHTML.replace(/-0-/g, `-${formCount}-`);
+        newRow.style.display = '';
+        
+        // Clear all values in the new row
+        newRow.querySelectorAll('input, select, textarea').forEach(input => {
+            const name = input.name || '';
+            if (input.type !== 'checkbox' && !name.includes('DELETE') && !name.includes('id') && !name.includes('TOTAL') && !name.includes('MIN') && !name.includes('MAX')) {
+                input.value = '';
+                // For selects, reset to empty
+                if (input.tagName === 'SELECT') {
+                    input.selectedIndex = -1;
+                }
+            }
+        });
+        
+        // Show DELETE checkbox but uncheck it
+        const deleteCheckbox = newRow.querySelector('input[name$="-DELETE"]');
+        if (deleteCheckbox) deleteCheckbox.checked = false;
+        
+        // Reinitialize Select2 on the original row if it had Select2 before
+        if (templateSelect) {
+            $(templateSelect).select2({
+                placeholder: 'Select a part...',
+                allowClear: true,
+                width: '100%',
+                dropdownAutoWidth: true
+            });
+        }
+        
+        // Append to tbody
+        partsFormset.appendChild(newRow);
+        formCount++;
+        totalFormsInput.value = formCount;
+        
+        // Initialize Select2 for the new part dropdown
+        const newPartSelect = newRow.querySelector('select[name*="-part"]');
+        if (newPartSelect) {
+            $(newPartSelect).select2({
+                placeholder: 'Select a part...',
+                allowClear: true,
+                width: '100%',
+                dropdownAutoWidth: true
+            });
+        }
+        
+        // Scroll to new row
+        newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    
+    // Remove part form
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-part')) {
+            const form = e.target.closest('.part-form');
+            const deleteCheckbox = form.querySelector('input[name$="-DELETE"]');
+            const idInput = form.querySelector('input[name$="-id"]');
+            
+            if (idInput && idInput.value) {
+                // Existing form - mark for deletion
+                deleteCheckbox.checked = true;
+                form.style.opacity = '0.5';
+                form.style.pointerEvents = 'none';
+            } else {
+                // New form - destroy Select2 and remove from DOM
+                const select = form.querySelector('select[name*="-part"]');
+                if (select && $(select).hasClass('select2-hidden-accessible')) {
+                    $(select).select2('destroy');
+                }
+                form.remove();
+                formCount--;
+                totalFormsInput.value = formCount;
+            }
+        }
+    });
+    
+    // Show existing rows
+    document.querySelectorAll('.part-form').forEach(row => {
+        const idInput = row.querySelector('input[name$="-id"]');
+        if (idInput && idInput.value) {
+            row.style.display = '';
+        }
+    });
+    
+    // Show first row if none exist
+    if (document.querySelectorAll('.part-form:not([style*="display: none"])').length === 0) {
+        const firstRow = document.querySelector('.part-form');
+        if (firstRow) {
+            firstRow.style.display = '';
+        }
+    }
+});
+</script>
+
+<style>
+.part-form input,
+.part-form select,
+.part-form textarea {
+    border: 1px solid #dee2e6;
+    width: 100%;
+    background: white;
+    padding: 4px;
+}
+
+.part-form input:focus,
+.part-form select:focus,
+.part-form textarea:focus {
+    outline: none;
+    border: 1px solid #0d6efd;
+    background: white;
+    padding: 4px;
+}
+
+#parts-table tbody tr {
+    height: 70px;
+}
+
+#parts-table td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+input[type="checkbox"][name*="-DELETE"] {
+    display: none;
+}
+
+.remove-part {
+    width: 100%;
+    white-space: nowrap;
+}
+
+input[name="cost"][readonly] {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+.part-form .input-group {
+    display: flex;
+    align-items: stretch;
+}
+
+.part-form .input-group-text {
+    border: 1px solid #dee2e6;
+}
+
+.part-form .input-group input {
+    border-left: none;
+}
+
+.part-form textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+/* Mobile-responsive table */
+@media (max-width: 768px) {
+    #parts-table thead {
+        display: none;
+    }
+    
+    #parts-table tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        height: auto;
+    }
+    
+    #parts-table tbody tr td {
+        display: block;
+        width: 100% !important;
+        padding: 0.75rem 0;
+        border: none;
+        vertical-align: top;
+        text-align: left;
+    }
+    
+    #parts-table tbody tr td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        display: block;
+        margin-bottom: 0.25rem;
+        color: #495057;
+        font-size: 0.875rem;
+    }
+    
+    #parts-table tbody tr td:nth-child(1)::before { content: "Part:"; }
+    #parts-table tbody tr td:nth-child(2)::before { content: "Quantity:"; }
+    #parts-table tbody tr td:nth-child(3)::before { content: "Unit:"; }
+    #parts-table tbody tr td:nth-child(4)::before { content: "Cost:"; }
+    #parts-table tbody tr td:nth-child(5)::before { content: "Additional Info:"; }
+    #parts-table tbody tr td:nth-child(6)::before { content: "Disposal Type:"; }
+    #parts-table tbody tr td:nth-child(7)::before { content: "Action:"; }
+    
+    #parts-table td input,
+    #parts-table td select,
+    #parts-table td textarea {
+        width: 100%;
+    }
+    
+    .remove-part {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+    
+    #parts-table td .text-danger {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+}
+</style>
 {% endblock %}

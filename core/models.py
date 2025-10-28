@@ -302,6 +302,8 @@ class PMS(models.Model):
     description = models.TextField(blank=True, verbose_name='Service Description')
     notes = models.TextField(blank=True, verbose_name='Additional Notes')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Scheduled', verbose_name='Status')
+    # Link to repair record if parts were replaced during PMS
+    repair = models.ForeignKey(Repair, on_delete=models.SET_NULL, null=True, blank=True, related_name='pms_records', verbose_name='Associated Repair')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
