@@ -49,6 +49,7 @@ urlpatterns = [
     path('repairs/add/', views.repair_create, name='repair_create'),
     path('repairs/<int:pk>/edit/', views.repair_edit, name='repair_edit'),
     path('repairs/<int:pk>/delete/', views.repair_delete, name='repair_delete'),
+    path('repairs/<int:pk>/complete/', views.repair_complete, name='repair_complete'),
     
     # PMS URLs
     path('pms/', views.pms_list, name='pms_list'),
@@ -56,6 +57,7 @@ urlpatterns = [
     path('pms/add/', views.pms_create, name='pms_create'),
     path('pms/<int:pk>/edit/', views.pms_edit, name='pms_edit'),
     path('pms/<int:pk>/delete/', views.pms_delete, name='pms_delete'),
+    path('pms/<int:pk>/complete/', views.pms_complete, name='pms_complete'),
     
     # Operational Status
     path('status/', views.operational_status, name='operational_status'),
@@ -67,4 +69,19 @@ urlpatterns = [
     path('notifications/', views.notifications, name='notifications'),
     path('notifications/<int:notification_id>/mark-read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    
+    # Inspection Report URLs
+    # Pre-Inspection Reports
+    path('pre-inspections/', views.pre_inspection_list, name='pre_inspection_list'),
+    path('pre-inspections/add/', views.pre_inspection_create, name='pre_inspection_create'),
+    path('pre-inspections/<int:pk>/', views.pre_inspection_detail, name='pre_inspection_detail'),
+    path('pre-inspections/<int:pk>/edit/', views.pre_inspection_edit, name='pre_inspection_edit'),
+    path('pre-inspections/<int:pk>/approve/', views.pre_inspection_approve, name='pre_inspection_approve'),
+    
+    # Post-Inspection Reports
+    path('post-inspections/', views.post_inspection_list, name='post_inspection_list'),
+    path('post-inspections/add/', views.post_inspection_create, name='post_inspection_create'),
+    path('post-inspections/<int:pk>/', views.post_inspection_detail, name='post_inspection_detail'),
+    path('post-inspections/<int:pk>/edit/', views.post_inspection_edit, name='post_inspection_edit'),
+    path('post-inspections/<int:pk>/approve/', views.post_inspection_approve, name='post_inspection_approve'),
 ]

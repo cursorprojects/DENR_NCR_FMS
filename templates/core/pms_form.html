@@ -14,6 +14,25 @@
                     <form method="post">
                         {% csrf_token %}
                         
+                        <!-- Inspection Requirements -->
+                        <div class="alert alert-info" role="alert">
+                            <h6><i class="bi bi-info-circle"></i> Inspection Requirements</h6>
+                            <p class="mb-2">Before creating a PMS record, you must:</p>
+                            <ul class="mb-0">
+                                <li>Create a <strong>pre-inspection report</strong> for the vehicle</li>
+                                <li>Have the pre-inspection report <strong>approved</strong> by a supervisor</li>
+                                <li>To mark PMS as completed, you must create and approve a <strong>post-inspection report</strong></li>
+                            </ul>
+                            <div class="mt-2">
+                                <a href="{% url 'pre_inspection_create' %}" class="btn btn-sm btn-outline-primary me-2">
+                                    <i class="bi bi-plus-lg"></i> Create Pre-Inspection
+                                </a>
+                                <a href="{% url 'pre_inspection_list' %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-list"></i> View Pre-Inspections
+                                </a>
+                            </div>
+                        </div>
+                        
                         <!-- Hidden Service Type Field -->
                         {{ form.service_type }}
                         
@@ -24,6 +43,20 @@
                                 {{ form.vehicle }}
                                 {% if form.vehicle.errors %}
                                     <div class="text-danger">{{ form.vehicle.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Pre-Inspection Selection -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Pre-Inspection Report <span class="text-danger">*</span></label>
+                                {{ form.pre_inspection }}
+                                {% if form.pre_inspection.help_text %}
+                                    <div class="form-text">{{ form.pre_inspection.help_text }}</div>
+                                {% endif %}
+                                {% if form.pre_inspection.errors %}
+                                    <div class="text-danger">{{ form.pre_inspection.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -78,6 +111,20 @@
                                 {{ form.status }}
                                 {% if form.status.errors %}
                                     <div class="text-danger">{{ form.status.errors }}</div>
+                                {% endif %}
+                                {% if form.status.help_text %}
+                                    <div class="form-text">{{ form.status.help_text }}</div>
+                                {% endif %}
+                                {% if pms.status == 'Completed' %}
+                                    <div class="alert alert-warning mt-2" role="alert">
+                                        <i class="bi bi-exclamation-triangle"></i> 
+                                        Status cannot be changed once marked as completed. Use the post-inspection workflow.
+                                    </div>
+                                {% elif pms.status == 'In Progress' and not pms.post_inspection %}
+                                    <div class="alert alert-info mt-2" role="alert">
+                                        <i class="bi bi-info-circle"></i> 
+                                        To mark as completed, create and approve a post-inspection report first.
+                                    </div>
                                 {% endif %}
                             </div>
                         </div>

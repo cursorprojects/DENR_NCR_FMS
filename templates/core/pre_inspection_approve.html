@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Approve Pre-Inspection Report - {{ report.vehicle.plate_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title"><i class="bi bi-check-circle"></i> Approve Pre-Inspection Report</h3>
+                    <a href="{% url 'pre_inspection_detail' report.pk %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Report
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- Report Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-car-front"></i> Vehicle Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Vehicle:</strong></td>
+                                    <td>{{ report.vehicle.plate_number }} - {{ report.vehicle.brand }} {{ report.vehicle.model }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Report Type:</strong></td>
+                                    <td>{{ report.get_report_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Inspection Date:</strong></td>
+                                    <td>{{ report.inspection_date|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Inspected By:</strong></td>
+                                    <td>{{ report.inspected_by.get_full_name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-gear"></i> Overall Assessment</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Overall Condition:</strong></td>
+                                    <td>
+                                        <span class="badge condition-{{ report.overall_condition }}">
+                                            {{ report.get_overall_condition_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Current Mileage:</strong></td>
+                                    <td>{{ report.current_mileage|floatformat:0 }} km</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Fuel Level:</strong></td>
+                                    <td>{{ report.get_fuel_level_display }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Condition Summary -->
+                    <h5 class="mb-3"><i class="bi bi-clipboard-data"></i> Condition Summary</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong>Engine:</strong>
+                                <span class="badge condition-{{ report.engine_condition }} ms-2">
+                                    {{ report.get_engine_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Transmission:</strong>
+                                <span class="badge condition-{{ report.transmission_condition }} ms-2">
+                                    {{ report.get_transmission_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Brakes:</strong>
+                                <span class="badge condition-{{ report.brakes_condition }} ms-2">
+                                    {{ report.get_brakes_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Suspension:</strong>
+                                <span class="badge condition-{{ report.suspension_condition }} ms-2">
+                                    {{ report.get_suspension_condition_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong>Electrical:</strong>
+                                <span class="badge condition-{{ report.electrical_condition }} ms-2">
+                                    {{ report.get_electrical_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Body:</strong>
+                                <span class="badge condition-{{ report.body_condition }} ms-2">
+                                    {{ report.get_body_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Tires:</strong>
+                                <span class="badge condition-{{ report.tires_condition }} ms-2">
+                                    {{ report.get_tires_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Lights:</strong>
+                                <span class="badge condition-{{ report.lights_condition }} ms-2">
+                                    {{ report.get_lights_condition_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Issues and Concerns -->
+                    {% if report.issues_found or report.safety_concerns or report.recommended_actions %}
+                    <h5 class="mb-3"><i class="bi bi-exclamation-triangle"></i> Issues and Concerns</h5>
+                    <div class="row mb-4">
+                        {% if report.issues_found %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Issues Found</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ report.issues_found|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if report.safety_concerns %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card border-danger">
+                                <div class="card-header bg-danger bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-shield-exclamation"></i> Safety Concerns</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ report.safety_concerns|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if report.recommended_actions %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card border-info">
+                                <div class="card-header bg-info bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Recommended Actions</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ report.recommended_actions|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Approval Form -->
+                    <div class="card border-success">
+                        <div class="card-header bg-success bg-opacity-25">
+                            <h5 class="mb-0"><i class="bi bi-check-circle"></i> Approval</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="approval_notes" class="form-label">Approval Notes</label>
+                                    <textarea class="form-control" id="approval_notes" name="approval_notes" rows="3" placeholder="Add any notes about this approval..."></textarea>
+                                    <div class="form-text">Optional notes about the approval decision.</div>
+                                </div>
+                                
+                                <div class="alert alert-info" role="alert">
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>Note:</strong> By approving this report, you confirm that the inspection has been completed satisfactorily and the vehicle is ready for {{ report.get_report_type_display|lower }}.
+                                </div>
+                                
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'pre_inspection_detail' report.pk %}" class="btn btn-secondary">
+                                        <i class="bi bi-x-circle"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-check-circle"></i> Approve Report
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.condition-badge {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.condition-excellent { background-color: #d4edda; color: #155724; }
+.condition-good { background-color: #d1ecf1; color: #0c5460; }
+.condition-fair { background-color: #fff3cd; color: #856404; }
+.condition-poor { background-color: #f8d7da; color: #721c24; }
+.condition-critical { background-color: #f5c6cb; color: #721c24; }
+</style>
+{% endblock %}

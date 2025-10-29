@@ -250,6 +250,10 @@ class Repair(models.Model):
     date_of_repair = models.DateField()
     description = models.TextField()
     
+    # Inspection reports
+    pre_inspection = models.ForeignKey('PreInspectionReport', on_delete=models.CASCADE, related_name='repairs', null=True, blank=True)
+    post_inspection = models.ForeignKey('PostInspectionReport', on_delete=models.SET_NULL, null=True, blank=True, related_name='repairs')
+    
     # Keeping old fields for backward compatibility (will be phased out)
     repairing_part = models.ForeignKey(RepairPart, on_delete=models.SET_NULL, null=True, blank=True, related_name='repairs')
     part_additional_info = models.TextField(blank=True, verbose_name='Additional Info')
@@ -282,6 +286,9 @@ class Repair(models.Model):
         return parts_cost + labor_cost
     
     def save(self, *args, **kwargs):
+        # Enforce business rules
+        self._validate_inspection_requirements()
+        
         super().save(*args, **kwargs)
         
         # Auto-update vehicle status based on repair status
@@ -302,6 +309,38 @@ class Repair(models.Model):
                 'Under Repair',
                 reason=f'Repair started for vehicle {self.vehicle.plate_number}',
                 auto_update=True
+            )
+    
+    def _validate_inspection_requirements(self):
+        """Validate inspection requirements based on business rules"""
+        from django.core.exceptions import ValidationError
+        
+        # Rule 1: Cannot create repair without approved pre-inspection
+        if not self.pk and not self.pre_inspection:
+            raise ValidationError(
+                "A repair cannot be created without an approved pre-inspection report. "
+                "Please create and approve a pre-inspection report first."
+            )
+        
+        # Rule 2: Cannot mark as completed without post-inspection
+        if self.status == 'Completed' and not self.post_inspection:
+            raise ValidationError(
+                "A repair cannot be marked as completed without a post-inspection report. "
+                "Please create and approve a post-inspection report first."
+            )
+        
+        # Rule 3: Pre-inspection must be approved
+        if self.pre_inspection and not self.pre_inspection.is_approved:
+            raise ValidationError(
+                "The pre-inspection report must be approved before creating a repair. "
+                "Please approve the pre-inspection report first."
+            )
+        
+        # Rule 4: Post-inspection must be approved if provided
+        if self.post_inspection and not self.post_inspection.is_approved:
+            raise ValidationError(
+                "The post-inspection report must be approved before marking repair as completed. "
+                "Please approve the post-inspection report first."
             )
     
     class Meta:
@@ -370,6 +409,252 @@ class Notification(models.Model):
         verbose_name_plural = 'Notifications'
 
 
+class PreInspectionReport(models.Model):
+    """Pre-inspection report before repair or PMS"""
+    
+    REPORT_TYPE_CHOICES = [
+        ('repair', 'Repair'),
+        ('pms', 'PMS'),
+    ]
+    
+    CONDITION_CHOICES = [
+        ('excellent', 'Excellent'),
+        ('good', 'Good'),
+        ('fair', 'Fair'),
+        ('poor', 'Poor'),
+        ('critical', 'Critical'),
+    ]
+    
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='pre_inspections')
+    report_type = models.CharField(max_length=10, choices=REPORT_TYPE_CHOICES)
+    inspection_date = models.DateTimeField(auto_now_add=True)
+    inspected_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='pre_inspections')
+    
+    # Vehicle condition assessment
+    engine_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    transmission_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    brakes_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    suspension_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    electrical_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    body_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    tires_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    lights_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    
+    # Mileage and fuel
+    current_mileage = models.IntegerField()
+    fuel_level = models.CharField(max_length=20, choices=[
+        ('full', 'Full'),
+        ('three_quarters', '3/4'),
+        ('half', '1/2'),
+        ('quarter', '1/4'),
+        ('empty', 'Empty'),
+    ])
+    
+    # Issues found
+    issues_found = models.TextField(blank=True, help_text="List all issues found during inspection")
+    safety_concerns = models.TextField(blank=True, help_text="Any safety concerns identified")
+    recommended_actions = models.TextField(blank=True, help_text="Recommended actions before proceeding")
+    
+    # Photos
+    photos = models.JSONField(default=list, blank=True, help_text="List of photo file paths")
+    
+    # Approval
+    approved_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_pre_inspections')
+    approval_date = models.DateTimeField(null=True, blank=True)
+    approval_notes = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Pre-Inspection: {self.vehicle.plate_number} - {self.get_report_type_display()} ({self.inspection_date.date()})"
+    
+    @property
+    def overall_condition(self):
+        """Calculate overall condition based on individual assessments"""
+        conditions = [
+            self.engine_condition,
+            self.transmission_condition,
+            self.brakes_condition,
+            self.suspension_condition,
+            self.electrical_condition,
+            self.body_condition,
+            self.tires_condition,
+            self.lights_condition,
+        ]
+        
+        condition_scores = {
+            'excellent': 5,
+            'good': 4,
+            'fair': 3,
+            'poor': 2,
+            'critical': 1,
+        }
+        
+        avg_score = sum(condition_scores[cond] for cond in conditions) / len(conditions)
+        
+        if avg_score >= 4.5:
+            return 'excellent'
+        elif avg_score >= 3.5:
+            return 'good'
+        elif avg_score >= 2.5:
+            return 'fair'
+        elif avg_score >= 1.5:
+            return 'poor'
+        else:
+            return 'critical'
+    
+    @property
+    def is_approved(self):
+        return self.approved_by is not None and self.approval_date is not None
+    
+    class Meta:
+        ordering = ['-inspection_date']
+        verbose_name = 'Pre-Inspection Report'
+        verbose_name_plural = 'Pre-Inspection Reports'
+
+
+class PostInspectionReport(models.Model):
+    """Post-inspection report after repair or PMS completion"""
+    
+    REPORT_TYPE_CHOICES = [
+        ('repair', 'Repair'),
+        ('pms', 'PMS'),
+    ]
+    
+    CONDITION_CHOICES = [
+        ('excellent', 'Excellent'),
+        ('good', 'Good'),
+        ('fair', 'Fair'),
+        ('poor', 'Poor'),
+        ('critical', 'Critical'),
+    ]
+    
+    SATISFACTION_CHOICES = [
+        ('excellent', 'Excellent'),
+        ('good', 'Good'),
+        ('satisfactory', 'Satisfactory'),
+        ('poor', 'Poor'),
+        ('unsatisfactory', 'Unsatisfactory'),
+    ]
+    
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='post_inspections')
+    report_type = models.CharField(max_length=10, choices=REPORT_TYPE_CHOICES)
+    inspection_date = models.DateTimeField(auto_now_add=True)
+    inspected_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='post_inspections')
+    
+    # Link to pre-inspection report
+    pre_inspection = models.ForeignKey(PreInspectionReport, on_delete=models.CASCADE, related_name='post_inspections')
+    
+    # Work completion assessment
+    work_completed_satisfactorily = models.BooleanField(default=True)
+    quality_of_work = models.CharField(max_length=15, choices=SATISFACTION_CHOICES)
+    timeliness = models.CharField(max_length=15, choices=SATISFACTION_CHOICES)
+    cleanliness = models.CharField(max_length=15, choices=SATISFACTION_CHOICES)
+    
+    # Post-work condition assessment
+    engine_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    transmission_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    brakes_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    suspension_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    electrical_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    body_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    tires_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    lights_condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    
+    # Test drive results
+    test_drive_performed = models.BooleanField(default=True)
+    test_drive_distance = models.IntegerField(default=0, help_text="Distance driven during test (km)")
+    test_drive_notes = models.TextField(blank=True, help_text="Notes from test drive")
+    
+    # Issues and recommendations
+    remaining_issues = models.TextField(blank=True, help_text="Any issues that remain unresolved")
+    future_recommendations = models.TextField(blank=True, help_text="Recommendations for future maintenance")
+    warranty_notes = models.TextField(blank=True, help_text="Warranty information if applicable")
+    
+    # Photos
+    photos = models.JSONField(default=list, blank=True, help_text="List of photo file paths")
+    
+    # Final approval
+    approved_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_post_inspections')
+    approval_date = models.DateTimeField(null=True, blank=True)
+    approval_notes = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Post-Inspection: {self.vehicle.plate_number} - {self.get_report_type_display()} ({self.inspection_date.date()})"
+    
+    @property
+    def overall_condition(self):
+        """Calculate overall condition based on individual assessments"""
+        conditions = [
+            self.engine_condition,
+            self.transmission_condition,
+            self.brakes_condition,
+            self.suspension_condition,
+            self.electrical_condition,
+            self.body_condition,
+            self.tires_condition,
+            self.lights_condition,
+        ]
+        
+        condition_scores = {
+            'excellent': 5,
+            'good': 4,
+            'fair': 3,
+            'poor': 2,
+            'critical': 1,
+        }
+        
+        avg_score = sum(condition_scores[cond] for cond in conditions) / len(conditions)
+        
+        if avg_score >= 4.5:
+            return 'excellent'
+        elif avg_score >= 3.5:
+            return 'good'
+        elif avg_score >= 2.5:
+            return 'fair'
+        elif avg_score >= 1.5:
+            return 'poor'
+        else:
+            return 'critical'
+    
+    @property
+    def is_approved(self):
+        return self.approved_by is not None and self.approval_date is not None
+    
+    @property
+    def condition_improvement(self):
+        """Compare post-inspection condition with pre-inspection condition"""
+        pre_condition = self.pre_inspection.overall_condition
+        post_condition = self.overall_condition
+        
+        condition_scores = {
+            'excellent': 5,
+            'good': 4,
+            'fair': 3,
+            'poor': 2,
+            'critical': 1,
+        }
+        
+        pre_score = condition_scores[pre_condition]
+        post_score = condition_scores[post_condition]
+        
+        if post_score > pre_score:
+            return 'improved'
+        elif post_score == pre_score:
+            return 'maintained'
+        else:
+            return 'deteriorated'
+    
+    class Meta:
+        ordering = ['-inspection_date']
+        verbose_name = 'Post-Inspection Report'
+        verbose_name_plural = 'Post-Inspection Reports'
+
+
 class PMS(models.Model):
     """Preventive Maintenance Service"""
     STATUS_CHOICES = [
@@ -392,6 +677,11 @@ class PMS(models.Model):
     description = models.TextField(blank=True, verbose_name='Service Description')
     notes = models.TextField(blank=True, verbose_name='Additional Notes')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Scheduled', verbose_name='Status')
+    
+    # Inspection reports
+    pre_inspection = models.ForeignKey('PreInspectionReport', on_delete=models.CASCADE, related_name='pms_records', null=True, blank=True)
+    post_inspection = models.ForeignKey('PostInspectionReport', on_delete=models.SET_NULL, null=True, blank=True, related_name='pms_records')
+    
     # Link to repair record if parts were replaced during PMS
     repair = models.ForeignKey(Repair, on_delete=models.SET_NULL, null=True, blank=True, related_name='pms_records', verbose_name='Associated Repair')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -401,6 +691,9 @@ class PMS(models.Model):
         return f"{self.vehicle.plate_number} - {self.service_type} - {self.scheduled_date}"
     
     def save(self, *args, **kwargs):
+        # Enforce business rules
+        self._validate_inspection_requirements()
+        
         super().save(*args, **kwargs)
         
         # Auto-update vehicle status based on PMS status
@@ -424,6 +717,38 @@ class PMS(models.Model):
                     reason=f'PMS completed for vehicle {self.vehicle.plate_number}',
                     auto_update=True
                 )
+    
+    def _validate_inspection_requirements(self):
+        """Validate inspection requirements based on business rules"""
+        from django.core.exceptions import ValidationError
+        
+        # Rule 1: Cannot create PMS without approved pre-inspection
+        if not self.pk and not self.pre_inspection:
+            raise ValidationError(
+                "A PMS record cannot be created without an approved pre-inspection report. "
+                "Please create and approve a pre-inspection report first."
+            )
+        
+        # Rule 2: Cannot mark as completed without post-inspection
+        if self.status == 'Completed' and not self.post_inspection:
+            raise ValidationError(
+                "A PMS record cannot be marked as completed without a post-inspection report. "
+                "Please create and approve a post-inspection report first."
+            )
+        
+        # Rule 3: Pre-inspection must be approved
+        if self.pre_inspection and not self.pre_inspection.is_approved:
+            raise ValidationError(
+                "The pre-inspection report must be approved before creating a PMS record. "
+                "Please approve the pre-inspection report first."
+            )
+        
+        # Rule 4: Post-inspection must be approved if provided
+        if self.post_inspection and not self.post_inspection.is_approved:
+            raise ValidationError(
+                "The post-inspection report must be approved before marking PMS as completed. "
+                "Please approve the post-inspection report first."
+            )
     
     class Meta:
         verbose_name = 'Preventive Maintenance Service'

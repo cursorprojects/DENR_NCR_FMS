@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title"><i class="bi bi-clipboard-check"></i> {{ title }}</h3>
+                    <a href="{% url 'pre_inspection_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Information -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.vehicle.id_for_label }}" class="form-label">Vehicle</label>
+                                    {{ form.vehicle }}
+                                    {% if form.vehicle.errors %}
+                                        <div class="text-danger">{{ form.vehicle.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.report_type.id_for_label }}" class="form-label">Report Type</label>
+                                    {{ form.report_type }}
+                                    {% if form.report_type.errors %}
+                                        <div class="text-danger">{{ form.report_type.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vehicle Condition Assessment -->
+                        <h5 class="mb-3"><i class="bi bi-gear"></i> Vehicle Condition Assessment</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.engine_condition.id_for_label }}" class="form-label">Engine Condition</label>
+                                    {{ form.engine_condition }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.transmission_condition.id_for_label }}" class="form-label">Transmission Condition</label>
+                                    {{ form.transmission_condition }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.brakes_condition.id_for_label }}" class="form-label">Brakes Condition</label>
+                                    {{ form.brakes_condition }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.suspension_condition.id_for_label }}" class="form-label">Suspension Condition</label>
+                                    {{ form.suspension_condition }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.electrical_condition.id_for_label }}" class="form-label">Electrical Condition</label>
+                                    {{ form.electrical_condition }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.body_condition.id_for_label }}" class="form-label">Body Condition</label>
+                                    {{ form.body_condition }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.tires_condition.id_for_label }}" class="form-label">Tires Condition</label>
+                                    {{ form.tires_condition }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.lights_condition.id_for_label }}" class="form-label">Lights Condition</label>
+                                    {{ form.lights_condition }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mileage and Fuel -->
+                        <h5 class="mb-3"><i class="bi bi-speedometer2"></i> Mileage and Fuel Information</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.current_mileage.id_for_label }}" class="form-label">Current Mileage</label>
+                                    {{ form.current_mileage }}
+                                    {% if form.current_mileage.errors %}
+                                        <div class="text-danger">{{ form.current_mileage.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.fuel_level.id_for_label }}" class="form-label">Fuel Level</label>
+                                    {{ form.fuel_level }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issues and Concerns -->
+                        <h5 class="mb-3"><i class="bi bi-exclamation-triangle"></i> Issues and Concerns</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.issues_found.id_for_label }}" class="form-label">Issues Found</label>
+                                    {{ form.issues_found }}
+                                    <div class="form-text">List all issues found during inspection</div>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.safety_concerns.id_for_label }}" class="form-label">Safety Concerns</label>
+                                    {{ form.safety_concerns }}
+                                    <div class="form-text">Any safety concerns identified</div>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.recommended_actions.id_for_label }}" class="form-label">Recommended Actions</label>
+                                    {{ form.recommended_actions }}
+                                    <div class="form-text">Recommended actions before proceeding</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Inspector Information -->
+                        <h5 class="mb-3"><i class="bi bi-person-check"></i> Inspector Information</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.inspected_by.id_for_label }}" class="form-label">Inspected By</label>
+                                    {{ form.inspected_by }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'pre_inspection_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.condition-badge {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.condition-excellent { background-color: #d4edda; color: #155724; }
+.condition-good { background-color: #d1ecf1; color: #0c5460; }
+.condition-fair { background-color: #fff3cd; color: #856404; }
+.condition-poor { background-color: #f8d7da; color: #721c24; }
+.condition-critical { background-color: #f5c6cb; color: #721c24; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-populate current mileage from vehicle if available
+    const vehicleSelect = document.getElementById('{{ form.vehicle.id_for_label }}');
+    const mileageInput = document.getElementById('{{ form.current_mileage.id_for_label }}');
+    
+    if (vehicleSelect && mileageInput) {
+        vehicleSelect.addEventListener('change', function() {
+            // This would need to be implemented with AJAX to fetch vehicle mileage
+            // For now, we'll just clear the field
+            if (!mileageInput.value) {
+                mileageInput.value = '';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

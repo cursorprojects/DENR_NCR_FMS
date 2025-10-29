@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Complete PMS - {{ pms.vehicle.plate_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title"><i class="bi bi-check-circle"></i> Complete PMS</h3>
+                    <a href="{% url 'pms_detail' pms.pk %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to PMS
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- PMS Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-car-front"></i> Vehicle Information</h5>
+                            <p><strong>Plate Number:</strong> {{ pms.vehicle.plate_number }}</p>
+                            <p><strong>Make/Model:</strong> {{ pms.vehicle.brand }} {{ pms.vehicle.model }}</p>
+                            <p><strong>Year:</strong> {{ pms.vehicle.year }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-gear"></i> PMS Information</h5>
+                            <p><strong>Service Type:</strong> {{ pms.service_type }}</p>
+                            <p><strong>Scheduled Date:</strong> {{ pms.scheduled_date }}</p>
+                            <p><strong>Current Status:</strong> 
+                                <span class="badge bg-warning text-dark">{{ pms.status }}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Post-Inspection Information -->
+                    <div class="alert alert-success" role="alert">
+                        <h6><i class="bi bi-clipboard-check"></i> Post-Inspection Approved</h6>
+                        <p class="mb-2">The post-inspection report has been approved and the PMS is ready to be completed.</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Inspected By:</strong> {{ post_inspection.inspected_by.get_full_name }}</p>
+                                <p><strong>Approved By:</strong> {{ post_inspection.approved_by.get_full_name }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Approval Date:</strong> {{ post_inspection.approval_date|date:"M d, Y g:i A" }}</p>
+                                <p><strong>Overall Condition:</strong> 
+                                    <span class="badge bg-success">{{ post_inspection.get_overall_condition_display }}</span>
+                                </p>
+                            </div>
+                        </div>
+                        {% if post_inspection.approval_notes %}
+                        <p><strong>Approval Notes:</strong> {{ post_inspection.approval_notes }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Completion Confirmation -->
+                    <div class="alert alert-info" role="alert">
+                        <h6><i class="bi bi-info-circle"></i> Completion Process</h6>
+                        <p class="mb-2">Completing this PMS will:</p>
+                        <ul class="mb-0">
+                            <li>Change the PMS status to <strong>"Completed"</strong></li>
+                            <li>Update the vehicle status to <strong>"Serviceable"</strong> (if no other ongoing maintenance)</li>
+                            <li>Create an activity log entry</li>
+                            <li>Send notifications to relevant users</li>
+                        </ul>
+                    </div>
+
+                    <!-- Completion Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'pms_detail' pms.pk %}" class="btn btn-secondary me-md-2">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Complete PMS
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

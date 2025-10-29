@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Post-Inspection Report - {{ report.vehicle.plate_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">
+                        <i class="bi bi-clipboard-check"></i> Post-Inspection Report
+                        {% if report.is_approved %}
+                            <span class="badge bg-success ms-2">Approved</span>
+                        {% else %}
+                            <span class="badge bg-warning ms-2">Pending Approval</span>
+                        {% endif %}
+                    </h3>
+                    <div>
+                        {% if not report.is_approved %}
+                            <a href="{% url 'post_inspection_approve' report.pk %}" class="btn btn-success me-2">
+                                <i class="bi bi-check-circle"></i> Approve
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'post_inspection_edit' report.pk %}" class="btn btn-primary me-2">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <a href="{% url 'post_inspection_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Basic Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-car-front"></i> Vehicle Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Vehicle:</strong></td>
+                                    <td>{{ report.vehicle.plate_number }} - {{ report.vehicle.brand }} {{ report.vehicle.model }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Report Type:</strong></td>
+                                    <td>{{ report.get_report_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Inspection Date:</strong></td>
+                                    <td>{{ report.inspection_date|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Inspected By:</strong></td>
+                                    <td>{{ report.inspected_by.get_full_name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-link-45deg"></i> Related Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Pre-Inspection:</strong></td>
+                                    <td>
+                                        <a href="{% url 'pre_inspection_detail' report.pre_inspection.pk %}" class="text-decoration-none">
+                                            {{ report.pre_inspection.inspection_date|date:"M d, Y" }}
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Overall Condition:</strong></td>
+                                    <td>
+                                        <span class="badge condition-{{ report.overall_condition }}">
+                                            {{ report.get_overall_condition_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Condition Change:</strong></td>
+                                    <td>
+                                        {% if report.condition_improvement == 'improved' %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-arrow-up"></i> Improved
+                                            </span>
+                                        {% elif report.condition_improvement == 'maintained' %}
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-dash"></i> Maintained
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-arrow-down"></i> Deteriorated
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Work Completion Assessment -->
+                    <h5 class="mb-3"><i class="bi bi-check-circle"></i> Work Completion Assessment</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>Work Quality</h6>
+                                    <div class="mb-2">
+                                        <strong>Completed Satisfactorily:</strong>
+                                        {% if report.work_completed_satisfactorily %}
+                                            <span class="badge bg-success ms-2">
+                                                <i class="bi bi-check-circle"></i> Yes
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger ms-2">
+                                                <i class="bi bi-x-circle"></i> No
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Quality of Work:</strong>
+                                        <span class="badge bg-info ms-2">{{ report.get_quality_of_work_display }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>Service Assessment</h6>
+                                    <div class="mb-2">
+                                        <strong>Timeliness:</strong>
+                                        <span class="badge bg-info ms-2">{{ report.get_timeliness_display }}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Cleanliness:</strong>
+                                        <span class="badge bg-info ms-2">{{ report.get_cleanliness_display }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Post-Work Condition Assessment -->
+                    <h5 class="mb-3"><i class="bi bi-gear"></i> Post-Work Condition Assessment</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong>Engine:</strong>
+                                <span class="badge condition-{{ report.engine_condition }} ms-2">
+                                    {{ report.get_engine_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Transmission:</strong>
+                                <span class="badge condition-{{ report.transmission_condition }} ms-2">
+                                    {{ report.get_transmission_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Brakes:</strong>
+                                <span class="badge condition-{{ report.brakes_condition }} ms-2">
+                                    {{ report.get_brakes_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Suspension:</strong>
+                                <span class="badge condition-{{ report.suspension_condition }} ms-2">
+                                    {{ report.get_suspension_condition_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong>Electrical:</strong>
+                                <span class="badge condition-{{ report.electrical_condition }} ms-2">
+                                    {{ report.get_electrical_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Body:</strong>
+                                <span class="badge condition-{{ report.body_condition }} ms-2">
+                                    {{ report.get_body_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Tires:</strong>
+                                <span class="badge condition-{{ report.tires_condition }} ms-2">
+                                    {{ report.get_tires_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Lights:</strong>
+                                <span class="badge condition-{{ report.lights_condition }} ms-2">
+                                    {{ report.get_lights_condition_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Test Drive Results -->
+                    {% if report.test_drive_performed %}
+                    <h5 class="mb-3"><i class="bi bi-car-front"></i> Test Drive Results</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Test Drive Performed:</strong>
+                                            <span class="badge bg-success ms-2">
+                                                <i class="bi bi-check-circle"></i> Yes
+                                            </span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Distance Driven:</strong> {{ report.test_drive_distance }} km
+                                        </div>
+                                        {% if report.test_drive_notes %}
+                                        <div class="col-md-12 mt-2">
+                                            <strong>Test Drive Notes:</strong><br>
+                                            {{ report.test_drive_notes|linebreaks }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Issues and Recommendations -->
+                    {% if report.remaining_issues or report.future_recommendations or report.warranty_notes %}
+                    <h5 class="mb-3"><i class="bi bi-exclamation-triangle"></i> Issues and Recommendations</h5>
+                    <div class="row mb-4">
+                        {% if report.remaining_issues %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Remaining Issues</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ report.remaining_issues|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if report.future_recommendations %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card border-info">
+                                <div class="card-header bg-info bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Future Recommendations</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ report.future_recommendations|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if report.warranty_notes %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card border-success">
+                                <div class="card-header bg-success bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-shield-check"></i> Warranty Notes</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ report.warranty_notes|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Approval Information -->
+                    {% if report.is_approved %}
+                    <h5 class="mb-3"><i class="bi bi-check-circle"></i> Approval Information</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card border-success">
+                                <div class="card-header bg-success bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-check-circle"></i> Approved</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Approved By:</strong> {{ report.approved_by.get_full_name }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Approval Date:</strong> {{ report.approval_date|date:"M d, Y g:i A" }}
+                                        </div>
+                                        {% if report.approval_notes %}
+                                        <div class="col-md-12 mt-2">
+                                            <strong>Approval Notes:</strong><br>
+                                            {{ report.approval_notes|linebreaks }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.condition-badge {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.condition-excellent { background-color: #d4edda; color: #155724; }
+.condition-good { background-color: #d1ecf1; color: #0c5460; }
+.condition-fair { background-color: #fff3cd; color: #856404; }
+.condition-poor { background-color: #f8d7da; color: #721c24; }
+.condition-critical { background-color: #f5c6cb; color: #721c24; }
+</style>
+{% endblock %}

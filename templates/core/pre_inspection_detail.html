@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Pre-Inspection Report - {{ report.vehicle.plate_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">
+                        <i class="bi bi-clipboard-check"></i> Pre-Inspection Report
+                        {% if report.is_approved %}
+                            <span class="badge bg-success ms-2">Approved</span>
+                        {% else %}
+                            <span class="badge bg-warning ms-2">Pending Approval</span>
+                        {% endif %}
+                    </h3>
+                    <div>
+                        {% if not report.is_approved %}
+                            <a href="{% url 'pre_inspection_approve' report.pk %}" class="btn btn-success me-2">
+                                <i class="bi bi-check-circle"></i> Approve
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'pre_inspection_edit' report.pk %}" class="btn btn-primary me-2">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <a href="{% url 'pre_inspection_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Basic Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-car-front"></i> Vehicle Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Vehicle:</strong></td>
+                                    <td>{{ report.vehicle.plate_number }} - {{ report.vehicle.brand }} {{ report.vehicle.model }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Report Type:</strong></td>
+                                    <td>{{ report.get_report_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Inspection Date:</strong></td>
+                                    <td>{{ report.inspection_date|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Inspected By:</strong></td>
+                                    <td>{{ report.inspected_by.get_full_name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-speedometer2"></i> Mileage & Fuel</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Current Mileage:</strong></td>
+                                    <td>{{ report.current_mileage|floatformat:0 }} km</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Fuel Level:</strong></td>
+                                    <td>{{ report.get_fuel_level_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Overall Condition:</strong></td>
+                                    <td>
+                                        <span class="badge condition-{{ report.overall_condition }}">
+                                            {{ report.get_overall_condition_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Vehicle Condition Assessment -->
+                    <h5 class="mb-3"><i class="bi bi-gear"></i> Vehicle Condition Assessment</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong>Engine:</strong>
+                                <span class="badge condition-{{ report.engine_condition }} ms-2">
+                                    {{ report.get_engine_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Transmission:</strong>
+                                <span class="badge condition-{{ report.transmission_condition }} ms-2">
+                                    {{ report.get_transmission_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Brakes:</strong>
+                                <span class="badge condition-{{ report.brakes_condition }} ms-2">
+                                    {{ report.get_brakes_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Suspension:</strong>
+                                <span class="badge condition-{{ report.suspension_condition }} ms-2">
+                                    {{ report.get_suspension_condition_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong>Electrical:</strong>
+                                <span class="badge condition-{{ report.electrical_condition }} ms-2">
+                                    {{ report.get_electrical_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Body:</strong>
+                                <span class="badge condition-{{ report.body_condition }} ms-2">
+                                    {{ report.get_body_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Tires:</strong>
+                                <span class="badge condition-{{ report.tires_condition }} ms-2">
+                                    {{ report.get_tires_condition_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Lights:</strong>
+                                <span class="badge condition-{{ report.lights_condition }} ms-2">
+                                    {{ report.get_lights_condition_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Issues and Concerns -->
+                    {% if report.issues_found or report.safety_concerns or report.recommended_actions %}
+                    <h5 class="mb-3"><i class="bi bi-exclamation-triangle"></i> Issues and Concerns</h5>
+                    <div class="row mb-4">
+                        {% if report.issues_found %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Issues Found</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ report.issues_found|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if report.safety_concerns %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card border-danger">
+                                <div class="card-header bg-danger bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-shield-exclamation"></i> Safety Concerns</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ report.safety_concerns|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if report.recommended_actions %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card border-info">
+                                <div class="card-header bg-info bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Recommended Actions</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ report.recommended_actions|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Approval Information -->
+                    {% if report.is_approved %}
+                    <h5 class="mb-3"><i class="bi bi-check-circle"></i> Approval Information</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card border-success">
+                                <div class="card-header bg-success bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-check-circle"></i> Approved</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Approved By:</strong> {{ report.approved_by.get_full_name }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Approval Date:</strong> {{ report.approval_date|date:"M d, Y g:i A" }}
+                                        </div>
+                                        {% if report.approval_notes %}
+                                        <div class="col-md-12 mt-2">
+                                            <strong>Approval Notes:</strong><br>
+                                            {{ report.approval_notes|linebreaks }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Related Records -->
+                    <h5 class="mb-3"><i class="bi bi-link-45deg"></i> Related Records</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Repairs</h6>
+                                            {% if report.repairs.exists %}
+                                                <ul class="list-unstyled">
+                                                    {% for repair in report.repairs.all %}
+                                                    <li>
+                                                        <a href="{% url 'repair_detail' repair.pk %}" class="text-decoration-none">
+                                                            <i class="bi bi-wrench"></i> {{ repair.date_of_repair }} - {{ repair.description|truncatewords:5 }}
+                                                        </a>
+                                                    </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% else %}
+                                                <p class="text-muted">No repairs associated with this inspection.</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>PMS Records</h6>
+                                            {% if report.pms_records.exists %}
+                                                <ul class="list-unstyled">
+                                                    {% for pms in report.pms_records.all %}
+                                                    <li>
+                                                        <a href="{% url 'pms_detail' pms.pk %}" class="text-decoration-none">
+                                                            <i class="bi bi-gear"></i> {{ pms.scheduled_date }} - {{ pms.service_type }}
+                                                        </a>
+                                                    </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% else %}
+                                                <p class="text-muted">No PMS records associated with this inspection.</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.condition-badge {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.condition-excellent { background-color: #d4edda; color: #155724; }
+.condition-good { background-color: #d1ecf1; color: #0c5460; }
+.condition-fair { background-color: #fff3cd; color: #856404; }
+.condition-poor { background-color: #f8d7da; color: #721c24; }
+.condition-critical { background-color: #f5c6cb; color: #721c24; }
+</style>
+{% endblock %}

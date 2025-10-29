@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.forms import inlineformset_factory
-from .models import Vehicle, Repair, Driver, Division, RepairShop, RepairPart, RepairPartItem, PMS
+from .models import Vehicle, Repair, Driver, Division, RepairShop, RepairPart, RepairPartItem, PMS, PreInspectionReport, PostInspectionReport
 
 User = get_user_model()
 
@@ -114,7 +114,7 @@ class RepairForm(forms.ModelForm):
         model = Repair
         fields = [
             'vehicle', 'date_of_repair', 'description',
-            'cost', 'labor_cost', 'repair_shop', 'technician', 'status'
+            'cost', 'labor_cost', 'repair_shop', 'technician', 'status', 'pre_inspection'
         ]
         widgets = {
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
@@ -125,6 +125,7 @@ class RepairForm(forms.ModelForm):
             'repair_shop': forms.Select(attrs={'class': 'form-control'}),
             'technician': forms.TextInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
+            'pre_inspection': forms.Select(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -132,6 +133,48 @@ class RepairForm(forms.ModelForm):
         # Only show active repair shops in the dropdown
         self.fields['repair_shop'].queryset = RepairShop.objects.filter(is_active=True)
         self.fields['repair_shop'].empty_label = "Select a repair shop..."
+        
+        # Filter pre-inspections to only show approved ones for repairs
+        self.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(
+            report_type='repair',
+            approved_by__isnull=False
+        ).order_by('-inspection_date')
+        self.fields['pre_inspection'].empty_label = "Select an approved pre-inspection report..."
+        self.fields['pre_inspection'].required = True
+        
+        # Add help text
+        self.fields['pre_inspection'].help_text = "Required: Select an approved pre-inspection report for repairs"
+        
+        # Disable status field if repair is completed or if no post-inspection exists
+        if self.instance.pk:
+            if self.instance.status == 'Completed':
+                self.fields['status'].widget.attrs['disabled'] = True
+                self.fields['status'].help_text = "Status cannot be changed once marked as completed. Use post-inspection workflow."
+            elif self.instance.status == 'Ongoing' and not self.instance.post_inspection:
+                # Allow changing from Ongoing to Completed only if post-inspection exists
+                status_choices = list(self.fields['status'].choices)
+                # Remove 'Completed' option if no post-inspection
+                self.fields['status'].choices = [(k, v) for k, v in status_choices if k != 'Completed']
+                self.fields['status'].help_text = "Cannot mark as completed without post-inspection report."
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        pre_inspection = cleaned_data.get('pre_inspection')
+        status = cleaned_data.get('status')
+        
+        # Additional validation
+        if pre_inspection and not pre_inspection.is_approved:
+            raise forms.ValidationError(
+                "The selected pre-inspection report must be approved before creating a repair."
+            )
+        
+        if status == 'Completed' and not self.instance.post_inspection:
+            raise forms.ValidationError(
+                "Cannot mark repair as completed without a post-inspection report. "
+                "Please create and approve a post-inspection report first."
+            )
+        
+        return cleaned_data
 
 
 class DriverForm(forms.ModelForm):
@@ -171,7 +214,7 @@ class PMSForm(forms.ModelForm):
         fields = [
             'vehicle', 'service_type', 'scheduled_date', 'completed_date',
             'mileage_at_service', 'next_service_mileage', 'cost',
-            'provider', 'technician', 'description', 'notes', 'status'
+            'provider', 'technician', 'description', 'notes', 'status', 'pre_inspection'
         ]
         widgets = {
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
@@ -186,6 +229,7 @@ class PMSForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'status': forms.Select(attrs={'class': 'form-control'}),
+            'pre_inspection': forms.Select(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -198,6 +242,29 @@ class PMSForm(forms.ModelForm):
         self.fields['service_type'].initial = 'General Inspection'
         self.fields['service_type'].required = False
         
+        # Filter pre-inspections to only show approved ones for PMS
+        self.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(
+            report_type='pms',
+            approved_by__isnull=False
+        ).order_by('-inspection_date')
+        self.fields['pre_inspection'].empty_label = "Select an approved pre-inspection report..."
+        self.fields['pre_inspection'].required = True
+        
+        # Add help text
+        self.fields['pre_inspection'].help_text = "Required: Select an approved pre-inspection report for PMS"
+        
+        # Disable status field if PMS is completed or if no post-inspection exists
+        if self.instance.pk:
+            if self.instance.status == 'Completed':
+                self.fields['status'].widget.attrs['disabled'] = True
+                self.fields['status'].help_text = "Status cannot be changed once marked as completed. Use post-inspection workflow."
+            elif self.instance.status == 'In Progress' and not self.instance.post_inspection:
+                # Allow changing from In Progress to Completed only if post-inspection exists
+                status_choices = list(self.fields['status'].choices)
+                # Remove 'Completed' option if no post-inspection
+                self.fields['status'].choices = [(k, v) for k, v in status_choices if k != 'Completed']
+                self.fields['status'].help_text = "Cannot mark as completed without post-inspection report."
+        
         # If editing and there's a provider, try to find matching repair shop
         if self.instance.pk and self.instance.provider:
             try:
@@ -205,6 +272,25 @@ class PMSForm(forms.ModelForm):
                 self.fields['repair_shop'].initial = repair_shop.id
             except (RepairShop.DoesNotExist, RepairShop.MultipleObjectsReturned):
                 pass
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        pre_inspection = cleaned_data.get('pre_inspection')
+        status = cleaned_data.get('status')
+        
+        # Additional validation
+        if pre_inspection and not pre_inspection.is_approved:
+            raise forms.ValidationError(
+                "The selected pre-inspection report must be approved before creating a PMS record."
+            )
+        
+        if status == 'Completed' and not self.instance.post_inspection:
+            raise forms.ValidationError(
+                "Cannot mark PMS as completed without a post-inspection report. "
+                "Please create and approve a post-inspection report first."
+            )
+        
+        return cleaned_data
     
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -277,3 +363,94 @@ class RepairShopForm(forms.ModelForm):
             'contact_person': forms.TextInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+
+class PreInspectionReportForm(forms.ModelForm):
+    class Meta:
+        model = PreInspectionReport
+        fields = [
+            'vehicle', 'report_type', 'inspected_by',
+            'engine_condition', 'transmission_condition', 'brakes_condition',
+            'suspension_condition', 'electrical_condition', 'body_condition',
+            'tires_condition', 'lights_condition', 'current_mileage', 'fuel_level',
+            'issues_found', 'safety_concerns', 'recommended_actions'
+        ]
+        widgets = {
+            'vehicle': forms.Select(attrs={'class': 'form-control'}),
+            'report_type': forms.Select(attrs={'class': 'form-control'}),
+            'inspected_by': forms.Select(attrs={'class': 'form-control'}),
+            'engine_condition': forms.Select(attrs={'class': 'form-control'}),
+            'transmission_condition': forms.Select(attrs={'class': 'form-control'}),
+            'brakes_condition': forms.Select(attrs={'class': 'form-control'}),
+            'suspension_condition': forms.Select(attrs={'class': 'form-control'}),
+            'electrical_condition': forms.Select(attrs={'class': 'form-control'}),
+            'body_condition': forms.Select(attrs={'class': 'form-control'}),
+            'tires_condition': forms.Select(attrs={'class': 'form-control'}),
+            'lights_condition': forms.Select(attrs={'class': 'form-control'}),
+            'current_mileage': forms.NumberInput(attrs={'class': 'form-control'}),
+            'fuel_level': forms.Select(attrs={'class': 'form-control'}),
+            'issues_found': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'safety_concerns': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'recommended_actions': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set default values for condition fields
+        for field_name in ['engine_condition', 'transmission_condition', 'brakes_condition',
+                          'suspension_condition', 'electrical_condition', 'body_condition',
+                          'tires_condition', 'lights_condition']:
+            if not self.instance.pk:  # Only for new instances
+                self.fields[field_name].initial = 'good'
+
+
+class PostInspectionReportForm(forms.ModelForm):
+    class Meta:
+        model = PostInspectionReport
+        fields = [
+            'vehicle', 'report_type', 'inspected_by', 'pre_inspection',
+            'work_completed_satisfactorily', 'quality_of_work', 'timeliness', 'cleanliness',
+            'engine_condition', 'transmission_condition', 'brakes_condition',
+            'suspension_condition', 'electrical_condition', 'body_condition',
+            'tires_condition', 'lights_condition', 'test_drive_performed',
+            'test_drive_distance', 'test_drive_notes', 'remaining_issues',
+            'future_recommendations', 'warranty_notes'
+        ]
+        widgets = {
+            'vehicle': forms.Select(attrs={'class': 'form-control'}),
+            'report_type': forms.Select(attrs={'class': 'form-control'}),
+            'inspected_by': forms.Select(attrs={'class': 'form-control'}),
+            'pre_inspection': forms.Select(attrs={'class': 'form-control'}),
+            'work_completed_satisfactorily': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'quality_of_work': forms.Select(attrs={'class': 'form-control'}),
+            'timeliness': forms.Select(attrs={'class': 'form-control'}),
+            'cleanliness': forms.Select(attrs={'class': 'form-control'}),
+            'engine_condition': forms.Select(attrs={'class': 'form-control'}),
+            'transmission_condition': forms.Select(attrs={'class': 'form-control'}),
+            'brakes_condition': forms.Select(attrs={'class': 'form-control'}),
+            'suspension_condition': forms.Select(attrs={'class': 'form-control'}),
+            'electrical_condition': forms.Select(attrs={'class': 'form-control'}),
+            'body_condition': forms.Select(attrs={'class': 'form-control'}),
+            'tires_condition': forms.Select(attrs={'class': 'form-control'}),
+            'lights_condition': forms.Select(attrs={'class': 'form-control'}),
+            'test_drive_performed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'test_drive_distance': forms.NumberInput(attrs={'class': 'form-control'}),
+            'test_drive_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'remaining_issues': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'future_recommendations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'warranty_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set default values for condition fields
+        for field_name in ['engine_condition', 'transmission_condition', 'brakes_condition',
+                          'suspension_condition', 'electrical_condition', 'body_condition',
+                          'tires_condition', 'lights_condition']:
+            if not self.instance.pk:  # Only for new instances
+                self.fields[field_name].initial = 'good'
+        
+        # Set default values for satisfaction fields
+        for field_name in ['quality_of_work', 'timeliness', 'cleanliness']:
+            if not self.instance.pk:  # Only for new instances
+                self.fields[field_name].initial = 'good'

@@ -13,8 +13,8 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.contrib.auth import get_user_model
 import json
-from .models import Vehicle, Repair, Driver, Division, ActivityLog, RepairShop, PMS, Notification
-from .forms import VehicleForm, RepairForm, DriverForm, DivisionForm, UserForm, RepairShopForm, RepairPartItemFormSet, PMSForm, PMSRepairPartItemFormSet
+from .models import Vehicle, Repair, Driver, Division, ActivityLog, RepairShop, PMS, Notification, PreInspectionReport, PostInspectionReport
+from .forms import VehicleForm, RepairForm, DriverForm, DivisionForm, UserForm, RepairShopForm, RepairPartItemFormSet, PMSForm, PMSRepairPartItemFormSet, PreInspectionReportForm, PostInspectionReportForm
 
 User = get_user_model()
 
@@ -267,22 +267,30 @@ def repair_create(request):
     if request.method == 'POST':
         form = RepairForm(request.POST)
         formset = RepairPartItemFormSet(request.POST)
-        if form.is_valid() and formset.is_valid():
-            repair = form.save()
-            formset.instance = repair
-            formset.save()
-            
-            # Calculate and update the total parts cost
-            total_parts_cost = sum(item.cost for item in repair.part_items.all() if item.cost)
-            repair.cost = total_parts_cost
-            repair.save()
-            
-            # If vehicle is marked as damaged, update its status
-            if 'damaged' in repair.description.lower() or repair.status == 'Ongoing':
-                repair.vehicle.status = 'Damaged'
-                repair.vehicle.save()
-            messages.success(request, 'Repair record created successfully!')
-            return redirect('repair_list')
+        
+        try:
+            if form.is_valid() and formset.is_valid():
+                repair = form.save()
+                formset.instance = repair
+                formset.save()
+                
+                # Calculate and update the total parts cost
+                total_parts_cost = sum(item.cost for item in repair.part_items.all() if item.cost)
+                repair.cost = total_parts_cost
+                repair.save()
+                
+                # If vehicle is marked as damaged, update its status
+                if 'damaged' in repair.description.lower() or repair.status == 'Ongoing':
+                    repair.vehicle.status = 'Damaged'
+                    repair.vehicle.save()
+                
+                messages.success(request, 'Repair record created successfully!')
+                return redirect('repair_list')
+        except ValidationError as e:
+            messages.error(request, str(e))
+            # Re-render the form with errors
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
     else:
         form = RepairForm()
         # For create mode, start with 1 empty form
@@ -1061,68 +1069,75 @@ def pms_create(request):
         form = PMSForm(request.POST)
         formset = PMSRepairPartItemFormSet(request.POST)
         
-        if form.is_valid() and formset.is_valid():
-            pms = form.save()
-            
-            # Check if user selected any parts to replace
-            has_parts = False
-            parts_cost = 0
-            
-            for part_form in formset:
-                if part_form.cleaned_data and not part_form.cleaned_data.get('DELETE', False):
-                    has_parts = True
-                    cost = part_form.cleaned_data.get('cost') or 0
-                    parts_cost += float(cost)
-            
-            # If parts were replaced, create a repair record
-            if has_parts:
-                from django.utils import timezone
+        try:
+            if form.is_valid() and formset.is_valid():
+                pms = form.save()
                 
-                # Get PMS service cost to use as labor cost
-                pms_service_cost = float(pms.cost) if pms.cost else 0
+                # Check if user selected any parts to replace
+                has_parts = False
+                parts_cost = 0
                 
-                # Create repair record for PMS
-                repair = Repair.objects.create(
-                    vehicle=pms.vehicle,
-                    date_of_repair=pms.scheduled_date,
-                    description=f"PMS: {pms.service_type}",
-                    cost=parts_cost,
-                    labor_cost=pms_service_cost,
-                    repair_shop=form.cleaned_data.get('repair_shop'),
-                    technician=pms.technician,
-                    status='Completed'
-                )
+                for part_form in formset:
+                    if part_form.cleaned_data and not part_form.cleaned_data.get('DELETE', False):
+                        has_parts = True
+                        cost = part_form.cleaned_data.get('cost') or 0
+                        parts_cost += float(cost)
                 
-                # Link repair to PMS
-                pms.repair = repair
-                pms.save()
+                # If parts were replaced, create a repair record
+                if has_parts:
+                    from django.utils import timezone
+                    
+                    # Get PMS service cost to use as labor cost
+                    pms_service_cost = float(pms.cost) if pms.cost else 0
+                    
+                    # Create repair record for PMS
+                    repair = Repair.objects.create(
+                        vehicle=pms.vehicle,
+                        date_of_repair=pms.scheduled_date,
+                        description=f"PMS: {pms.service_type}",
+                        cost=parts_cost,
+                        labor_cost=pms_service_cost,
+                        repair_shop=form.cleaned_data.get('repair_shop'),
+                        technician=pms.technician,
+                        status='Completed',
+                        pre_inspection=pms.pre_inspection  # Link to same pre-inspection
+                    )
+                    
+                    # Link repair to PMS
+                    pms.repair = repair
+                    pms.save()
+                    
+                    # Save formset with the repair
+                    formset.instance = repair
+                    formset.save()
+                    
+                    # Log activity
+                    ActivityLog.objects.create(
+                        user=request.user,
+                        action='create',
+                        model_name='Repair',
+                        object_id=repair.id,
+                        description=f'Created repair record for PMS: {pms.vehicle.plate_number}',
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
                 
-                # Save formset with the repair
-                formset.instance = repair
-                formset.save()
-                
-                # Log activity
+                # Log activity for PMS
                 ActivityLog.objects.create(
                     user=request.user,
                     action='create',
-                    model_name='Repair',
-                    object_id=repair.id,
-                    description=f'Created repair record for PMS: {pms.vehicle.plate_number}',
+                    model_name='PMS',
+                    object_id=pms.id,
+                    description=f'Created PMS record for {pms.vehicle.plate_number} - {pms.service_type}',
                     ip_address=request.META.get('REMOTE_ADDR')
                 )
-            
-            # Log activity for PMS
-            ActivityLog.objects.create(
-                user=request.user,
-                action='create',
-                model_name='PMS',
-                object_id=pms.id,
-                description=f'Created PMS record for {pms.vehicle.plate_number} - {pms.service_type}',
-                ip_address=request.META.get('REMOTE_ADDR')
-            )
-            
-            messages.success(request, 'PMS record created successfully!')
-            return redirect('pms_list')
+                
+                messages.success(request, 'PMS record created successfully!')
+                return redirect('pms_list')
+        except ValidationError as e:
+            messages.error(request, str(e))
+            # Re-render the form with errors
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
     else:
         form = PMSForm()
         formset = PMSRepairPartItemFormSet()
@@ -1255,3 +1270,295 @@ def pms_delete(request, pk):
         return redirect('pms_list')
     
     return render(request, 'core/pms_delete.html', {'pms': pms})
+
+
+# Inspection Report Views
+
+@login_required
+def pre_inspection_list(request):
+    """List all pre-inspection reports"""
+    reports = PreInspectionReport.objects.all().order_by('-inspection_date')
+    return render(request, 'core/pre_inspection_list.html', {'reports': reports})
+
+
+@login_required
+def pre_inspection_create(request):
+    """Create a new pre-inspection report"""
+    if request.method == 'POST':
+        form = PreInspectionReportForm(request.POST)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.inspected_by = request.user
+            report.save()
+            
+            # Log activity
+            ActivityLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='PreInspectionReport',
+                object_id=report.id,
+                description=f'Created pre-inspection report for {report.vehicle.plate_number} - {report.get_report_type_display()}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, 'Pre-inspection report created successfully!')
+            return redirect('pre_inspection_detail', pk=report.pk)
+    else:
+        form = PreInspectionReportForm()
+        # Set default inspected_by to current user
+        form.fields['inspected_by'].initial = request.user
+    
+    return render(request, 'core/pre_inspection_form.html', {'form': form, 'title': 'Create Pre-Inspection Report'})
+
+
+@login_required
+def pre_inspection_detail(request, pk):
+    """View pre-inspection report details"""
+    report = get_object_or_404(PreInspectionReport, pk=pk)
+    return render(request, 'core/pre_inspection_detail.html', {'report': report})
+
+
+@login_required
+def pre_inspection_edit(request, pk):
+    """Edit pre-inspection report"""
+    report = get_object_or_404(PreInspectionReport, pk=pk)
+    
+    if request.method == 'POST':
+        form = PreInspectionReportForm(request.POST, instance=report)
+        if form.is_valid():
+            form.save()
+            
+            # Log activity
+            ActivityLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='PreInspectionReport',
+                object_id=report.id,
+                description=f'Updated pre-inspection report for {report.vehicle.plate_number} - {report.get_report_type_display()}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, 'Pre-inspection report updated successfully!')
+            return redirect('pre_inspection_detail', pk=report.pk)
+    else:
+        form = PreInspectionReportForm(instance=report)
+    
+    return render(request, 'core/pre_inspection_form.html', {'form': form, 'title': 'Edit Pre-Inspection Report', 'report': report})
+
+
+@login_required
+def pre_inspection_approve(request, pk):
+    """Approve pre-inspection report"""
+    report = get_object_or_404(PreInspectionReport, pk=pk)
+    
+    if request.method == 'POST':
+        approval_notes = request.POST.get('approval_notes', '')
+        report.approved_by = request.user
+        report.approval_date = timezone.now()
+        report.approval_notes = approval_notes
+        report.save()
+        
+        # Log activity
+        ActivityLog.objects.create(
+            user=request.user,
+            action='approve',
+            model_name='PreInspectionReport',
+            object_id=report.id,
+            description=f'Approved pre-inspection report for {report.vehicle.plate_number} - {report.get_report_type_display()}',
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, 'Pre-inspection report approved successfully!')
+        return redirect('pre_inspection_detail', pk=report.pk)
+    
+    return render(request, 'core/pre_inspection_approve.html', {'report': report})
+
+
+@login_required
+def post_inspection_list(request):
+    """List all post-inspection reports"""
+    reports = PostInspectionReport.objects.all().order_by('-inspection_date')
+    return render(request, 'core/post_inspection_list.html', {'reports': reports})
+
+
+@login_required
+def post_inspection_create(request):
+    """Create a new post-inspection report"""
+    if request.method == 'POST':
+        form = PostInspectionReportForm(request.POST)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.inspected_by = request.user
+            report.save()
+            
+            # Log activity
+            ActivityLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='PostInspectionReport',
+                object_id=report.id,
+                description=f'Created post-inspection report for {report.vehicle.plate_number} - {report.get_report_type_display()}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, 'Post-inspection report created successfully!')
+            return redirect('post_inspection_detail', pk=report.pk)
+    else:
+        form = PostInspectionReportForm()
+        # Set default inspected_by to current user
+        form.fields['inspected_by'].initial = request.user
+    
+    return render(request, 'core/post_inspection_form.html', {'form': form, 'title': 'Create Post-Inspection Report'})
+
+
+@login_required
+def post_inspection_detail(request, pk):
+    """View post-inspection report details"""
+    report = get_object_or_404(PostInspectionReport, pk=pk)
+    return render(request, 'core/post_inspection_detail.html', {'report': report})
+
+
+@login_required
+def post_inspection_edit(request, pk):
+    """Edit post-inspection report"""
+    report = get_object_or_404(PostInspectionReport, pk=pk)
+    
+    if request.method == 'POST':
+        form = PostInspectionReportForm(request.POST, instance=report)
+        if form.is_valid():
+            form.save()
+            
+            # Log activity
+            ActivityLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='PostInspectionReport',
+                object_id=report.id,
+                description=f'Updated post-inspection report for {report.vehicle.plate_number} - {report.get_report_type_display()}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, 'Post-inspection report updated successfully!')
+            return redirect('post_inspection_detail', pk=report.pk)
+    else:
+        form = PostInspectionReportForm(instance=report)
+    
+    return render(request, 'core/post_inspection_form.html', {'form': form, 'title': 'Edit Post-Inspection Report', 'report': report})
+
+
+@login_required
+def post_inspection_approve(request, pk):
+    """Approve post-inspection report"""
+    report = get_object_or_404(PostInspectionReport, pk=pk)
+    
+    if request.method == 'POST':
+        approval_notes = request.POST.get('approval_notes', '')
+        report.approved_by = request.user
+        report.approval_date = timezone.now()
+        report.approval_notes = approval_notes
+        report.save()
+        
+        # Log activity
+        ActivityLog.objects.create(
+            user=request.user,
+            action='approve',
+            model_name='PostInspectionReport',
+            object_id=report.id,
+            description=f'Approved post-inspection report for {report.vehicle.plate_number} - {report.get_report_type_display()}',
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, 'Post-inspection report approved successfully!')
+        return redirect('post_inspection_detail', pk=report.pk)
+    
+    return render(request, 'core/post_inspection_approve.html', {'report': report})
+
+
+@login_required
+def repair_complete(request, pk):
+    """Complete a repair after post-inspection is approved"""
+    repair = get_object_or_404(Repair, pk=pk)
+    
+    # Check if repair can be completed
+    if repair.status == 'Completed':
+        messages.warning(request, 'This repair is already completed.')
+        return redirect('repair_detail', pk=pk)
+    
+    if not repair.post_inspection:
+        messages.error(request, 'Cannot complete repair without a post-inspection report.')
+        return redirect('repair_detail', pk=pk)
+    
+    if not repair.post_inspection.is_approved:
+        messages.error(request, 'Cannot complete repair without an approved post-inspection report.')
+        return redirect('repair_detail', pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            repair.status = 'Completed'
+            repair.save()
+            
+            # Log activity
+            ActivityLog.objects.create(
+                user=request.user,
+                action='complete',
+                model_name='Repair',
+                object_id=repair.id,
+                description=f'Completed repair for {repair.vehicle.plate_number}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, f'Repair for {repair.vehicle.plate_number} has been completed successfully!')
+            return redirect('repair_detail', pk=pk)
+        except Exception as e:
+            messages.error(request, f'Error completing repair: {str(e)}')
+    
+    context = {
+        'repair': repair,
+        'post_inspection': repair.post_inspection,
+    }
+    return render(request, 'core/repair_complete.html', context)
+
+
+@login_required
+def pms_complete(request, pk):
+    """Complete a PMS after post-inspection is approved"""
+    pms = get_object_or_404(PMS, pk=pk)
+    
+    # Check if PMS can be completed
+    if pms.status == 'Completed':
+        messages.warning(request, 'This PMS is already completed.')
+        return redirect('pms_detail', pk=pk)
+    
+    if not pms.post_inspection:
+        messages.error(request, 'Cannot complete PMS without a post-inspection report.')
+        return redirect('pms_detail', pk=pk)
+    
+    if not pms.post_inspection.is_approved:
+        messages.error(request, 'Cannot complete PMS without an approved post-inspection report.')
+        return redirect('pms_detail', pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            pms.status = 'Completed'
+            pms.save()
+            
+            # Log activity
+            ActivityLog.objects.create(
+                user=request.user,
+                action='complete',
+                model_name='PMS',
+                object_id=pms.id,
+                description=f'Completed PMS for {pms.vehicle.plate_number}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, f'PMS for {pms.vehicle.plate_number} has been completed successfully!')
+            return redirect('pms_detail', pk=pk)
+        except Exception as e:
+            messages.error(request, f'Error completing PMS: {str(e)}')
+    
+    context = {
+        'pms': pms,
+        'post_inspection': pms.post_inspection,
+    }
+    return render(request, 'core/pms_complete.html', context)
