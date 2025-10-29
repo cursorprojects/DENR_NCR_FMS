@@ -185,23 +185,12 @@ class Vehicle(models.Model):
     ]
     
     VEHICLE_TYPE_CHOICES = [
-        ('Sedan', 'Sedan'),
+        ('SEDAN', 'SEDAN'),
         ('SUV', 'SUV'),
-        ('Hatchback', 'Hatchback'),
-        ('Coupe', 'Coupe'),
-        ('Convertible', 'Convertible'),
-        ('Pickup Truck', 'Pickup Truck'),
-        ('Van', 'Van'),
-        ('Minivan', 'Minivan'),
-        ('Wagon', 'Wagon'),
-        ('Sports Car', 'Sports Car'),
-        ('Motorcycle', 'Motorcycle'),
-        ('Bicycle', 'Bicycle'),
-        ('Bus', 'Bus'),
-        ('Ambulance', 'Ambulance'),
-        ('Fire Truck', 'Fire Truck'),
-        ('Police Car', 'Police Car'),
-        ('Other', 'Other'),
+        ('TRUCK', 'TRUCK'),
+        ('PICK UP', 'PICK UP'),
+        ('MOTORCYCLE', 'MOTORCYCLE'),
+        ('CLOSE VAN', 'CLOSE VAN'),
     ]
     
     plate_number = models.CharField(max_length=50, unique=True)
