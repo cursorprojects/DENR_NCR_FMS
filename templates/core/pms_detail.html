@@ -316,9 +316,9 @@
                     <div class="row mt-4">
                         <div class="col-12">
                             <div class="d-flex justify-content-between">
-                                <a href="{% url 'pms_list' %}" class="btn btn-secondary">
-                                    <i class="bi bi-arrow-left"></i> Back to PMS List
-                                </a>
+                                <button onclick="history.back()" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left"></i> Back
+                                </button>
                                 <div class="btn-group">
                                     {% if pms.status != 'Completed' and pms.post_inspection and pms.post_inspection.is_approved %}
                                         <a href="{% url 'pms_complete' pms.id %}" class="btn btn-success">
