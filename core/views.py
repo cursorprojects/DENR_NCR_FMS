@@ -47,53 +47,72 @@ def dashboard(request):
     # Recent repairs
     recent_repairs = Repair.objects.all()[:5]
     
-    # Vehicles near PMS (6 months or 10,000km)
+    # Vehicles near PMS (check for scheduled PMS within 1 month)
     from datetime import timedelta
-    six_months_ago = timezone.now().date() - timedelta(days=180)
+    from dateutil.relativedelta import relativedelta
+    today = timezone.now().date()
+    one_month_from_now = today + relativedelta(months=1)
     
     vehicles_near_pms = []
     all_vehicles = Vehicle.objects.filter(status='Serviceable')
     
     for vehicle in all_vehicles:
-        # Get the last PMS record for this vehicle
-        last_pms = PMS.objects.filter(
+        # Check for overdue PMS first (highest priority)
+        overdue_pms = PMS.objects.filter(
             vehicle=vehicle,
-            status='Completed'
-        ).order_by('-completed_date').first()
+            status__in=['Scheduled', 'Overdue'],
+            scheduled_date__lt=today
+        ).order_by('scheduled_date').first()
         
         needs_pms = False
         reason = ""
+        scheduled_date = None
+        days_until = None
+        pms_record = None
         
-        if last_pms:
-            # Check if 6 months have passed since last PMS
-            if last_pms.completed_date and last_pms.completed_date <= six_months_ago:
-                needs_pms = True
-                reason = "6 months since last PMS"
-            # Check if 10,000km have been driven since last PMS
-            elif last_pms.next_service_mileage and vehicle.current_mileage >= last_pms.next_service_mileage:
-                needs_pms = True
-                reason = f"Reached {last_pms.next_service_mileage:,}km"
-        else:
-            # No PMS record found, consider it needs PMS
+        if overdue_pms:
+            # Found an overdue PMS - show this first (highest priority)
             needs_pms = True
-            reason = "No PMS record found"
+            pms_record = overdue_pms
+            scheduled_date = overdue_pms.scheduled_date
+            days_overdue = (today - scheduled_date).days
+            reason = f"PMS overdue by {days_overdue} day{'s' if days_overdue != 1 else ''} ({scheduled_date.strftime('%b %d, %Y')})"
+        else:
+            # Get upcoming scheduled PMS records that are within 1 month
+            upcoming_pms = PMS.objects.filter(
+                vehicle=vehicle,
+                status__in=['Scheduled', 'Overdue'],
+                scheduled_date__gte=today,
+                scheduled_date__lte=one_month_from_now
+            ).order_by('scheduled_date').first()
+            
+            if upcoming_pms:
+                # Found a scheduled PMS within 1 month
+                needs_pms = True
+                pms_record = upcoming_pms
+                scheduled_date = upcoming_pms.scheduled_date
+                days_until = (scheduled_date - today).days
+                if days_until == 0:
+                    reason = "PMS scheduled today"
+                elif days_until == 1:
+                    reason = "PMS scheduled tomorrow"
+                else:
+                    reason = f"PMS scheduled in {days_until} days ({scheduled_date.strftime('%b %d, %Y')})"
         
         if needs_pms:
             vehicles_near_pms.append({
                 'vehicle': vehicle,
                 'reason': reason,
-                'last_pms_date': last_pms.completed_date if last_pms else None,
-                'last_pms_mileage': last_pms.mileage_at_service if last_pms else None,
-                'next_service_mileage': last_pms.next_service_mileage if last_pms else None,
-                'current_mileage': vehicle.current_mileage,
-                'km_since_last_pms': vehicle.current_mileage - (last_pms.mileage_at_service if last_pms else 0)
+                'scheduled_date': scheduled_date,
+                'days_until': days_until,
+                'days_overdue': (today - scheduled_date).days if scheduled_date and scheduled_date < today else None,
+                'pms_record': pms_record
             })
     
-    # Sort by urgency (no PMS record first, then by km driven, then by date)
+    # Sort by urgency (overdue first, then by scheduled date - earliest first)
     vehicles_near_pms.sort(key=lambda x: (
-        0 if x['last_pms_date'] is None else 1,  # No PMS record first
-        -x['km_since_last_pms'],  # Higher km first
-        x['last_pms_date'] if x['last_pms_date'] else timezone.now().date()  # Older dates first
+        1 if x['days_overdue'] is not None else 0,  # Overdue first
+        x['scheduled_date'] if x['scheduled_date'] else timezone.now().date()  # Earliest scheduled date first
     ))
     
     # Take top 5

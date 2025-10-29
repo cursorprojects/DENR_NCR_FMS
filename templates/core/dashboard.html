@@ -293,8 +293,8 @@
                                     <th>Vehicle</th>
                                     <th>Division</th>
                                     <th>Driver</th>
-                                    <th>Current Mileage</th>
-                                    <th>Last PMS</th>
+                                    <th>Scheduled Date</th>
+                                    <th>Status</th>
                                     <th>Reason</th>
                                     <th>Action</th>
                                 </tr>
@@ -309,34 +309,47 @@
                                     <td>{{ item.vehicle.division.name|default:"-" }}</td>
                                     <td>{{ item.vehicle.assigned_driver.name|default:"No driver" }}</td>
                                     <td>
-                                        <strong>{{ item.current_mileage|floatformat:0 }} km</strong>
-                                        {% if item.km_since_last_pms > 0 %}
-                                        <br><small class="text-muted">+{{ item.km_since_last_pms|floatformat:0 }} km since last PMS</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if item.last_pms_date %}
-                                            {{ item.last_pms_date|date:"M d, Y" }}
-                                            {% if item.last_pms_mileage %}
-                                            <br><small class="text-muted">{{ item.last_pms_mileage|floatformat:0 }} km</small>
+                                        {% if item.scheduled_date %}
+                                            <strong>{{ item.scheduled_date|date:"M d, Y" }}</strong>
+                                            {% if item.days_until is not None %}
+                                                {% if item.days_until == 0 %}
+                                                    <br><small class="text-danger"><strong>Today!</strong></small>
+                                                {% elif item.days_until == 1 %}
+                                                    <br><small class="text-warning"><strong>Tomorrow</strong></small>
+                                                {% else %}
+                                                    <br><small class="text-info">{{ item.days_until }} days away</small>
+                                                {% endif %}
+                                            {% elif item.days_overdue %}
+                                                <br><small class="text-danger"><strong>{{ item.days_overdue }} day{{ item.days_overdue|pluralize }} overdue!</strong></small>
                                             {% endif %}
                                         {% else %}
                                             <span class="text-muted">No PMS record</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if item.reason == "6 months since last PMS" %}
-                                            <span class="badge bg-warning">{{ item.reason }}</span>
-                                        {% elif item.reason == "No PMS record found" %}
-                                            <span class="badge bg-danger">{{ item.reason }}</span>
+                                        {% if item.days_overdue %}
+                                            <span class="badge bg-danger">Overdue</span>
+                                        {% elif item.days_until == 0 %}
+                                            <span class="badge bg-danger">Due Today</span>
+                                        {% elif item.days_until == 1 %}
+                                            <span class="badge bg-warning">Due Tomorrow</span>
                                         {% else %}
-                                            <span class="badge bg-info">{{ item.reason }}</span>
+                                            <span class="badge bg-info">Upcoming</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <a href="{% url 'pms_create' %}?vehicle={{ item.vehicle.id }}" class="btn btn-sm btn-warning">
-                                            <i class="bi bi-gear"></i> Schedule PMS
-                                        </a>
+                                        <span class="text-dark">{{ item.reason }}</span>
+                                    </td>
+                                    <td>
+                                        {% if item.pms_record %}
+                                            <a href="{% url 'pms_detail' item.pms_record.id %}" class="btn btn-sm btn-info">
+                                                <i class="bi bi-eye"></i> View PMS
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'pms_create' %}?vehicle={{ item.vehicle.id }}" class="btn btn-sm btn-warning">
+                                                <i class="bi bi-gear"></i> Schedule PMS
+                                            </a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% empty %}

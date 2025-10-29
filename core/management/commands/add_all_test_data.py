@@ -8,6 +8,7 @@ from core.models import (
     RepairPartItem, CustomUser
 )
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from decimal import Decimal
 import random
 
@@ -27,7 +28,7 @@ class Command(BaseCommand):
         skip_existing = options.get('skip_existing', False)
         
         self.stdout.write(self.style.SUCCESS('=' * 70))
-        self.stdout.write(self.style.SUCCESS('FLEET MANAGEMENT SYSTEM - TEST DATA CREATION'))
+        self.stdout.write(self.style.SUCCESS('FLEET MANAGEMENT SYSTEM - COMPREHENSIVE TEST DATA CREATION'))
         self.stdout.write(self.style.SUCCESS('=' * 70))
         
         # Step 1: Create users with admin permissions
@@ -42,8 +43,8 @@ class Command(BaseCommand):
         self.stdout.write('\n[3/11] Creating drivers...')
         self.create_drivers()
         
-        # Step 4: Create vehicles
-        self.stdout.write('\n[4/11] Creating vehicles...')
+        # Step 4: Create vehicles with ALL statuses
+        self.stdout.write('\n[4/11] Creating vehicles (all statuses)...')
         self.create_vehicles()
         
         # Step 5: Create repair shops
@@ -58,17 +59,17 @@ class Command(BaseCommand):
         self.stdout.write('\n[7/11] Creating pre-inspection reports...')
         self.create_pre_inspections()
         
-        # Step 8: Create repair records with parts (needs pre-inspections)
-        self.stdout.write('\n[8/11] Creating repair records...')
-        self.create_repairs()
+        # Step 8: Create post-inspection reports (needed before completed repairs/PMS)
+        self.stdout.write('\n[8/11] Creating post-inspection reports...')
+        self.create_post_inspections()
         
-        # Step 9: Create PMS records (needs pre-inspections)
-        self.stdout.write('\n[9/11] Creating PMS records...')
+        # Step 9: Create PMS records FIRST (Scheduled/Overdue for Serviceable vehicles) - BEFORE repairs/PMS that change status
+        self.stdout.write('\n[9/11] Creating PMS records (all statuses)...')
         self.create_pms_records()
         
-        # Step 10: Create post-inspection reports
-        self.stdout.write('\n[10/11] Creating post-inspection reports...')
-        self.create_post_inspections()
+        # Step 10: Create repair records with ALL statuses and all fields (AFTER PMS so some vehicles can stay Serviceable)
+        self.stdout.write('\n[10/11] Creating repair records (all statuses)...')
+        self.create_repairs()
         
         # Step 11: Create notifications
         self.stdout.write('\n[11/11] Creating notifications...')
@@ -159,6 +160,29 @@ class Command(BaseCommand):
                     'can_edit_inspections': True, 'can_approve_inspections': True,
                 }
             },
+            {
+                'username': 'viewer',
+                'email': 'viewer@denr.gov.ph',
+                'first_name': 'John',
+                'last_name': 'Doe',
+                'status': 'active',
+                'phone': '+63-945-678-9012',
+                'permissions': {
+                    'can_view_vehicles': True,
+                    'can_view_repairs': True,
+                    'can_view_pms': True,
+                    'can_view_inspections': True,
+                }
+            },
+            {
+                'username': 'inactive_user',
+                'email': 'inactive@denr.gov.ph',
+                'first_name': 'Inactive',
+                'last_name': 'User',
+                'status': 'inactive',
+                'phone': '+63-956-789-0123',
+                'permissions': {}
+            },
         ]
         
         for user_data in users_data:
@@ -242,27 +266,60 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created} drivers'))
 
     def create_vehicles(self):
-        """Create vehicles"""
+        """Create vehicles with ALL statuses and ALL fields populated"""
         divisions = list(Division.objects.all())
         drivers = list(Driver.objects.all())
         admin_user = User.objects.filter(is_superuser=True).first() or User.objects.first()
         
+        # Vehicle data with variety of statuses
+        # Adding more Serviceable vehicles for better sample data
         vehicles_data = [
+            # Serviceable vehicles - more entries for better coverage
             ('ABC-1234', 'Toyota', 'Vios', 2020, 'Sedan', 'Serviceable', 35000, 850000),
             ('DEF-5678', 'Honda', 'CR-V', 2019, 'SUV', 'Serviceable', 28000, 1450000),
-            ('GHI-9012', 'Ford', 'Everest', 2021, 'SUV', 'Under Repair', 45000, 1250000),
-            ('JKL-3456', 'Mitsubishi', 'Montero', 2018, 'SUV', 'Serviceable', 52000, 1350000),
-            ('MNO-7890', 'Nissan', 'Navara', 2020, 'Pickup Truck', 'Serviceable', 38000, 1200000),
-            ('PQR-2468', 'Isuzu', 'D-Max', 2019, 'Pickup Truck', 'Unserviceable', 60000, 1150000),
-            ('STU-1357', 'Hyundai', 'Accent', 2021, 'Sedan', 'Serviceable', 25000, 750000),
-            ('VWX-9753', 'Suzuki', 'Ertiga', 2020, 'Van', 'Serviceable', 40000, 950000),
-            ('YZA-8642', 'Chevrolet', 'Trailblazer', 2019, 'SUV', 'Under Repair', 55000, 1300000),
-            ('BCD-7531', 'Mazda', 'CX-5', 2021, 'SUV', 'Serviceable', 30000, 1400000),
-            ('EFG-1111', 'Toyota', 'Hilux', 2019, 'Pickup Truck', 'Serviceable', 48000, 1200000),
-            ('HIJ-2222', 'Toyota', 'Innova', 2020, 'Van', 'Serviceable', 42000, 1050000),
-            ('KLM-3333', 'Honda', 'Civic', 2021, 'Sedan', 'Serviceable', 22000, 950000),
-            ('NOP-4444', 'Nissan', 'Terra', 2020, 'SUV', 'Serviceable', 35000, 1350000),
-            ('QRS-5555', 'Isuzu', 'Mu-X', 2019, 'SUV', 'Serviceable', 50000, 1280000),
+            ('GHI-9012', 'Mitsubishi', 'Montero', 2018, 'SUV', 'Serviceable', 52000, 1350000),
+            ('JKL-3456', 'Nissan', 'Navara', 2020, 'Pickup Truck', 'Serviceable', 38000, 1200000),
+            ('MNO-7890', 'Hyundai', 'Accent', 2021, 'Sedan', 'Serviceable', 25000, 750000),
+            ('PQR-2468', 'Suzuki', 'Ertiga', 2020, 'Van', 'Serviceable', 40000, 950000),
+            ('STU-1357', 'Mazda', 'CX-5', 2021, 'SUV', 'Serviceable', 30000, 1400000),
+            ('VWX-9753', 'Toyota', 'Hilux', 2019, 'Pickup Truck', 'Serviceable', 48000, 1200000),
+            ('YZA-8642', 'Toyota', 'Innova', 2020, 'Van', 'Serviceable', 42000, 1050000),
+            ('BCD-7531', 'Honda', 'Civic', 2021, 'Sedan', 'Serviceable', 22000, 950000),
+            ('EFG-1111', 'Nissan', 'Terra', 2020, 'SUV', 'Serviceable', 35000, 1350000),
+            ('HIJ-2222', 'Isuzu', 'Mu-X', 2019, 'SUV', 'Serviceable', 50000, 1280000),
+            ('KLM-3333', 'Toyota', 'Fortuner', 2021, 'SUV', 'Serviceable', 33000, 1450000),
+            ('NOP-4444', 'Honda', 'BR-V', 2020, 'SUV', 'Serviceable', 37000, 1300000),
+            ('QRS-5555', 'Mitsubishi', 'Strada', 2019, 'Pickup Truck', 'Serviceable', 55000, 1250000),
+            ('TUV-6666', 'Ford', 'Ranger', 2021, 'Pickup Truck', 'Serviceable', 29000, 1400000),
+            ('WXY-7777', 'Chevrolet', 'Colorado', 2020, 'Pickup Truck', 'Serviceable', 41000, 1280000),
+            ('ZAB-8888', 'Nissan', 'Almera', 2021, 'Sedan', 'Serviceable', 27000, 850000),
+            ('CDE-9999', 'Suzuki', 'APV', 2020, 'Van', 'Serviceable', 46000, 900000),
+            ('FGH-0000', 'Toyota', 'Avanza', 2019, 'Van', 'Serviceable', 52000, 950000),
+            
+            # Under Repair vehicles
+            ('REP-0001', 'Ford', 'Everest', 2021, 'SUV', 'Under Repair', 45000, 1250000),
+            ('REP-0002', 'Chevrolet', 'Trailblazer', 2019, 'SUV', 'Under Repair', 55000, 1300000),
+            ('REP-0003', 'Toyota', 'Camry', 2020, 'Sedan', 'Under Repair', 32000, 1450000),
+            ('REP-0004', 'Honda', 'Accord', 2021, 'Sedan', 'Under Repair', 29000, 1400000),
+            
+            # Unserviceable vehicles
+            ('UNS-0001', 'Isuzu', 'D-Max', 2019, 'Pickup Truck', 'Unserviceable', 60000, 1150000),
+            ('UNS-0002', 'Mitsubishi', 'L300', 2018, 'Van', 'Unserviceable', 70000, 800000),
+            ('UNS-0003', 'Nissan', 'Urvan', 2017, 'Van', 'Unserviceable', 80000, 950000),
+        ]
+        
+        colors = ['White', 'Black', 'Silver', 'Blue', 'Red', 'Gray', 'Green', 'Brown', 'Beige']
+        rfid_types = ['Autosweep', 'Easytrip']
+        gas_stations = ['Shell', 'Petron', 'Caltex', 'Total', 'Unioil', 'Seaoil']
+        status_reasons = [
+            'Regular operational status',
+            'Currently in use',
+            'Available for assignment',
+            'Under maintenance',
+            'Waiting for parts',
+            'Major repair in progress',
+            'Out of service - awaiting disposal',
+            'Non-operational - needs replacement',
         ]
         
         created = 0
@@ -270,8 +327,11 @@ class Command(BaseCommand):
             vehicle, new = Vehicle.objects.get_or_create(
                 plate_number=plate,
                 defaults={
-                    'brand': brand, 'model': model, 'year': year,
-                    'vehicle_type': vtype, 'status': status,
+                    'brand': brand, 
+                    'model': model, 
+                    'year': year,
+                    'vehicle_type': vtype, 
+                    'status': status,
                     'division': random.choice(divisions) if divisions else None,
                     'assigned_driver': random.choice(drivers) if drivers else None,
                     'date_acquired': datetime.now().date() - timedelta(days=random.randint(30, 1500)),
@@ -279,19 +339,21 @@ class Command(BaseCommand):
                     'acquisition_cost': Decimal(str(cost)),
                     'engine_number': f'ENG-{random.randint(100000, 999999)}',
                     'chassis_number': f'CHS-{random.randint(100000, 999999)}',
-                    'color': random.choice(['White', 'Black', 'Silver', 'Blue', 'Red', 'Gray']),
-                    'rfid_number': f'RFID-{random.randint(100000, 999999)}',
-                    'rfid_type': random.choice(['Autosweep', 'Easytrip']) if random.random() > 0.3 else None,
-                    'fleet_card_number': f'FC-{random.randint(100000, 999999)}',
-                    'gas_station': random.choice(['Shell', 'Petron', 'Caltex', 'Total']),
+                    'color': random.choice(colors),
+                    'rfid_number': f'RFID-{random.randint(100000, 999999)}' if random.random() > 0.2 else '',
+                    'rfid_type': random.choice(rfid_types) if random.random() > 0.3 else None,
+                    'fleet_card_number': f'FC-{random.randint(100000, 999999)}' if random.random() > 0.2 else '',
+                    'gas_station': random.choice(gas_stations) if random.random() > 0.2 else '',
+                    'notes': f'Vehicle notes for {plate}. Status: {status}.',
                     'status_changed_at': timezone.now() - timedelta(days=random.randint(1, 90)),
                     'status_changed_by': admin_user,
+                    'status_change_reason': random.choice(status_reasons),
                 }
             )
             if new:
                 created += 1
         
-        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created} vehicles'))
+        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created} vehicles (Serviceable: {Vehicle.objects.filter(status="Serviceable").count()}, Under Repair: {Vehicle.objects.filter(status="Under Repair").count()}, Unserviceable: {Vehicle.objects.filter(status="Unserviceable").count()})'))
 
     def create_repair_shops(self):
         """Create repair shops"""
@@ -311,8 +373,11 @@ class Command(BaseCommand):
             shop, new = RepairShop.objects.get_or_create(
                 name=name,
                 defaults={
-                    'address': address, 'phone': phone, 'email': email,
-                    'contact_person': contact, 'is_active': True
+                    'address': address, 
+                    'phone': phone, 
+                    'email': email,
+                    'contact_person': contact, 
+                    'is_active': random.choice([True, True, True, False])  # Mostly active
                 }
             )
             if new:
@@ -338,29 +403,108 @@ class Command(BaseCommand):
         for part_name in parts_data:
             part, new = RepairPart.objects.get_or_create(
                 name=part_name,
-                defaults={'description': f'Description for {part_name}', 'is_active': True}
+                defaults={
+                    'description': f'Description for {part_name}. Quality assured replacement part.',
+                    'is_active': random.choice([True, True, True, False])  # Mostly active
+                }
             )
             if new:
                 created += 1
         
         self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created} repair parts'))
 
+    def create_pre_inspections(self):
+        """Create pre-inspection reports - mix of approved and unapproved"""
+        vehicles = list(Vehicle.objects.all())
+        users = list(User.objects.all())
+        
+        if not vehicles or not users:
+            self.stdout.write(self.style.WARNING('  [-] Skipping pre-inspections (missing data)'))
+            return
+        
+        conditions = ['excellent', 'good', 'fair', 'poor', 'critical']
+        fuel_levels = ['full', 'three_quarters', 'half', 'quarter', 'empty']
+        
+        created_repair = 0
+        created_pms = 0
+        created_approved = 0
+        created_unapproved = 0
+        
+        # Create more pre-inspections to cover all scenarios
+        num_pre_inspections = min(40, len(vehicles) * 2)
+        selected_vehicles = random.sample(vehicles, min(num_pre_inspections // 2, len(vehicles)))
+        
+        for idx, vehicle in enumerate(selected_vehicles):
+            # Alternate between repair and PMS
+            if idx % 2 == 0:
+                report_type = 'repair'
+                created_repair += 1
+            else:
+                report_type = 'pms'
+                created_pms += 1
+            
+            # Mix of approved and unapproved (70% approved)
+            should_approve = random.random() < 0.7
+            
+            pre_inspection = PreInspectionReport.objects.create(
+                vehicle=vehicle,
+                report_type=report_type,
+                inspected_by=random.choice(users),
+                engine_condition=random.choice(conditions),
+                transmission_condition=random.choice(conditions),
+                brakes_condition=random.choice(conditions),
+                suspension_condition=random.choice(conditions),
+                electrical_condition=random.choice(conditions),
+                body_condition=random.choice(conditions),
+                tires_condition=random.choice(conditions),
+                lights_condition=random.choice(conditions),
+                current_mileage=(vehicle.current_mileage or 0) + random.randint(-1000, 1000),
+                fuel_level=random.choice(fuel_levels),
+                issues_found=f'Issues found during pre-inspection for {vehicle.plate_number}. Some components may need attention.',
+                safety_concerns='No major safety concerns identified.' if random.random() > 0.3 else 'Minor safety concerns noted.',
+                recommended_actions=f'Recommended actions before {report_type} work. Follow standard procedures.',
+                photos=[],  # Empty photos array
+                approved_by=random.choice(users) if should_approve else None,
+                approval_date=timezone.now() - timedelta(days=random.randint(1, 30)) if should_approve else None,
+                approval_notes=f'Pre-inspection approved for {report_type} work' if should_approve else ''
+            )
+            
+            if should_approve:
+                created_approved += 1
+            else:
+                created_unapproved += 1
+        
+        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created_repair + created_pms} pre-inspection reports (Repair: {created_repair}, PMS: {created_pms}, Approved: {created_approved}, Unapproved: {created_unapproved})'))
+
     def create_repairs(self):
-        """Create repair records with parts"""
+        """Create repair records with ALL statuses and ALL fields populated"""
         vehicles = list(Vehicle.objects.all())
         repair_shops = list(RepairShop.objects.filter(is_active=True))
         repair_parts = list(RepairPart.objects.filter(is_active=True))
-        # Get approved pre-inspections for repairs
+        # Get approved pre-inspections for repairs that are NOT already used
+        # Get pre-inspections already used in database
+        used_pre_inspection_ids = set()
+        used_pre_inspection_ids.update(
+            Repair.objects.exclude(pre_inspection__isnull=True)
+                         .values_list('pre_inspection_id', flat=True)
+        )
+        used_pre_inspection_ids.update(
+            PMS.objects.exclude(pre_inspection__isnull=True)
+                      .values_list('pre_inspection_id', flat=True)
+        )
+        
+        # Get available pre-inspections (not used)
         pre_inspections = list(PreInspectionReport.objects.filter(
             approved_by__isnull=False, report_type='repair'
-        ))
+        ).exclude(id__in=used_pre_inspection_ids))
+        users = list(User.objects.all())
         
         if not vehicles or not repair_parts:
             self.stdout.write(self.style.WARNING('  [-] Skipping repairs (missing vehicles or parts)'))
             return
         
         if not pre_inspections:
-            self.stdout.write(self.style.WARNING('  [-] Skipping repairs (no approved pre-inspections for repairs)'))
+            self.stdout.write(self.style.WARNING('  [-] Skipping repairs (no available approved pre-inspections for repairs)'))
             return
         
         descriptions = [
@@ -374,6 +518,16 @@ class Command(BaseCommand):
             'Transmission fluid change and inspection',
             'Major service - includes all filters and fluids',
             'Routine maintenance check and minor repairs',
+            'Engine overhaul and component replacement',
+            'Cooling system repair - radiator and hose replacement',
+            'Electrical system diagnosis and repair',
+            'Body repair and paint work',
+            'Exhaust system repair and muffler replacement',
+        ]
+        
+        technicians = [
+            'Juan Dela Cruz', 'Maria Santos', 'Pedro Garcia', 
+            'Roberto Martinez', 'Carlos Mendoza', 'Lisa Torres'
         ]
         
         common_parts = {
@@ -385,33 +539,56 @@ class Command(BaseCommand):
             'Spark Plugs': {'qty': Decimal('4'), 'unit': 'pcs', 'cost': Decimal('1200.00')},
             'Coolant/Antifreeze': {'qty': Decimal('6'), 'unit': 'liter', 'cost': Decimal('1800.00')},
             'Car Battery': {'qty': Decimal('1'), 'unit': 'pcs', 'cost': Decimal('8500.00')},
+            'Water Pump': {'qty': Decimal('1'), 'unit': 'pcs', 'cost': Decimal('6500.00')},
+            'Alternator': {'qty': Decimal('1'), 'unit': 'pcs', 'cost': Decimal('12000.00')},
         }
         
-        created = 0
-        # Limit to number of available pre-inspections
-        for i in range(min(15, len(pre_inspections))):
-            # Get a pre-inspection (reuse if needed)
-            pre_inspection = pre_inspections[i % len(pre_inspections)]
+        # Get post-inspections for completed repairs that haven't been used yet
+        used_post_inspection_ids = set()
+        used_post_inspection_ids.update(
+            Repair.objects.exclude(post_inspection__isnull=True)
+                         .values_list('post_inspection_id', flat=True)
+        )
+        
+        post_inspections = list(PostInspectionReport.objects.filter(
+            approved_by__isnull=False, report_type='repair'
+        ).exclude(id__in=used_post_inspection_ids))
+        
+        created_ongoing = 0
+        created_completed = 0
+        
+        # Track pre-inspections used in this run
+        used_pre_inspection_ids_in_run = set()
+        
+        # Create Ongoing repairs (more common) - ensure vehicles are set to "Under Repair" status
+        num_ongoing = min(15, len(pre_inspections))
+        for i in range(num_ongoing):
+            # Find an unused pre-inspection
+            available_pre_inspections = [pi for pi in pre_inspections if pi.id not in used_pre_inspection_ids_in_run]
+            if not available_pre_inspections:
+                break
+                
+            pre_inspection = random.choice(available_pre_inspections)
+            used_pre_inspection_ids_in_run.add(pre_inspection.id)
             vehicle = pre_inspection.vehicle
-            days_ago = random.randint(1, 365)
+            days_ago = random.randint(1, 90)
             repair_date = datetime.now().date() - timedelta(days=days_ago)
-            # Only create as Ongoing - completed repairs require post-inspections
-            status = 'Ongoing'
             
             repair = Repair.objects.create(
                 vehicle=vehicle,
                 date_of_repair=repair_date,
                 description=random.choice(descriptions),
-                status=status,
+                status='Ongoing',
                 repair_shop=random.choice(repair_shops) if repair_shops else None,
-                technician=random.choice(['Juan Dela Cruz', 'Maria Santos', 'Pedro Garcia']),
+                technician=random.choice(technicians),
                 cost=Decimal('0'),
                 labor_cost=Decimal(str(random.randint(500, 3000))),
-                pre_inspection=pre_inspection  # Link to pre-inspection
+                pre_inspection=pre_inspection,
+                post_inspection=None
             )
             
             # Add parts
-            num_parts = random.randint(1, 3)
+            num_parts = random.randint(1, 4)
             selected_part_names = random.sample(list(common_parts.keys()), min(num_parts, len(common_parts)))
             total_cost = Decimal('0')
             
@@ -430,149 +607,496 @@ class Command(BaseCommand):
             
             repair.cost = total_cost
             repair.save()
-            created += 1
+            
+            # Update vehicle status to "Under Repair" if it's Serviceable
+            # (This follows the correct logic - repairs automatically change vehicle status)
+            if vehicle.status == 'Serviceable':
+                vehicle.update_status('Under Repair', user=users[0] if users else None, reason=f'Ongoing repair: {repair.description[:50]}', auto_update=True)
+            
+            created_ongoing += 1
         
-        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created} repair records'))
+        # Create Completed repairs (need post-inspections)
+        # Use only repair-type post-inspections whose pre-inspections haven't been used in this run
+        repair_post_inspections = [
+            pi for pi in post_inspections 
+            if pi.report_type == 'repair' and pi.pre_inspection.id not in used_pre_inspection_ids_in_run
+        ]
+        num_completed = min(8, len(repair_post_inspections))
+        for i in range(num_completed):
+            # Find an available post-inspection with unused pre-inspection
+            available_post_inspections = [
+                pi for pi in repair_post_inspections 
+                if pi.pre_inspection.id not in used_pre_inspection_ids_in_run
+            ]
+            if not available_post_inspections:
+                break
+                
+            post_inspection = random.choice(available_post_inspections)
+            pre_inspection = post_inspection.pre_inspection
+            used_pre_inspection_ids_in_run.add(pre_inspection.id)
+            vehicle = post_inspection.vehicle
+                
+            days_ago = random.randint(10, 180)
+            repair_date = datetime.now().date() - timedelta(days=days_ago)
+            
+            repair = Repair.objects.create(
+                vehicle=vehicle,
+                date_of_repair=repair_date,
+                description=random.choice(descriptions),
+                status='Completed',
+                repair_shop=random.choice(repair_shops) if repair_shops else None,
+                technician=random.choice(technicians),
+                cost=Decimal('0'),
+                labor_cost=Decimal(str(random.randint(1000, 5000))),
+                pre_inspection=pre_inspection,
+                post_inspection=post_inspection
+            )
+            
+            # Add parts
+            num_parts = random.randint(2, 5)
+            selected_part_names = random.sample(list(common_parts.keys()), min(num_parts, len(common_parts)))
+            total_cost = Decimal('0')
+            
+            for part_name in selected_part_names:
+                part_obj = next((p for p in repair_parts if p.name == part_name), None)
+                if part_obj:
+                    part_data = common_parts[part_name]
+                    RepairPartItem.objects.create(
+                        repair=repair,
+                        part=part_obj,
+                        quantity=part_data['qty'],
+                        unit=part_data['unit'],
+                        cost=part_data['cost'],
+                    )
+                    total_cost += part_data['cost']
+            
+            repair.cost = total_cost
+            repair.save()
+            created_completed += 1
+        
+        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created_ongoing + created_completed} repair records (Ongoing: {created_ongoing}, Completed: {created_completed})'))
 
     def create_pms_records(self):
-        """Create PMS records"""
+        """Create PMS records with ALL statuses and ALL fields populated"""
         vehicles = list(Vehicle.objects.all())
-        # Get approved pre-inspections for PMS
+        # Get approved pre-inspections for PMS that are NOT already used
+        # Get pre-inspections already used in database
+        used_pre_inspection_ids = set()
+        used_pre_inspection_ids.update(
+            Repair.objects.exclude(pre_inspection__isnull=True)
+                         .values_list('pre_inspection_id', flat=True)
+        )
+        used_pre_inspection_ids.update(
+            PMS.objects.exclude(pre_inspection__isnull=True)
+                      .values_list('pre_inspection_id', flat=True)
+        )
+        
+        # Get available pre-inspections (not used)
         pre_inspections = list(PreInspectionReport.objects.filter(
             approved_by__isnull=False, report_type='pms'
-        ))
+        ).exclude(id__in=used_pre_inspection_ids))
+        users = list(User.objects.all())
         
         if not vehicles:
             self.stdout.write(self.style.WARNING('  [-] Skipping PMS (no vehicles)'))
             return
         
         if not pre_inspections:
-            self.stdout.write(self.style.WARNING('  [-] Skipping PMS (no approved pre-inspections for PMS)'))
+            self.stdout.write(self.style.WARNING('  [-] Skipping PMS (no available approved pre-inspections for PMS)'))
             return
+        
+        # CRITICAL: Get fresh list of Serviceable vehicles at the start
+        # We'll create Scheduled/Overdue PMS for these FIRST, before creating In Progress PMS
+        serviceable_vehicles_fresh = list(Vehicle.objects.filter(status='Serviceable'))
         
         providers = [
             'AutoCare Service Center', 'Quick Fix Garage', 'Professional Auto Repair',
             'Reliable Motors', 'Express Service Station', 'Precision Auto Works',
         ]
         
-        created = 0
-        # Limit to number of available pre-inspections
-        for i in range(min(20, len(pre_inspections))):
-            # Get a pre-inspection (reuse if needed)
-            pre_inspection = pre_inspections[i % len(pre_inspections)]
+        technicians = [
+            'Juan Dela Cruz', 'Pedro Santos', 'Maria Garcia',
+            'Roberto Martinez', 'Carlos Mendoza'
+        ]
+        
+        descriptions = [
+            'Routine general inspection including engine, brakes, lights, and fluid levels.',
+            'Comprehensive PMS covering all major systems and components.',
+            'Scheduled preventive maintenance service as per manufacturer recommendations.',
+            'Full service including oil change, filter replacement, and system checks.',
+            'Standard maintenance procedure with detailed inspection report.',
+        ]
+        
+        notes_options = [
+            'Regular scheduled maintenance',
+            'No issues found during inspection',
+            'Minor adjustments made',
+            'All systems operating normally',
+        ]
+        
+        # Get post-inspections for completed PMS that haven't been used yet
+        used_post_inspection_ids = set()
+        used_post_inspection_ids.update(
+            PMS.objects.exclude(post_inspection__isnull=True)
+                      .values_list('post_inspection_id', flat=True)
+        )
+        
+        post_inspections = list(PostInspectionReport.objects.filter(
+            approved_by__isnull=False, report_type='pms'
+        ).exclude(id__in=used_post_inspection_ids))
+        
+        # Keep track of pre-inspections we use in this run
+        used_pre_inspection_ids_in_run = set()
+        
+        today = datetime.now().date()
+        created_scheduled = 0
+        created_in_progress = 0
+        created_completed = 0
+        created_overdue = 0
+        created_cancelled = 0
+        
+        # Create Scheduled PMS (future dates within 1 month) - these will show in "Near PMS"
+        # IMPORTANT: Use the fresh list of Serviceable vehicles we got at the start
+        # Filter pre-inspections to only those for Serviceable vehicles
+        serviceable_vehicle_ids = [v.id for v in serviceable_vehicles_fresh]
+        serviceable_pre_inspections = [
+            pi for pi in pre_inspections 
+            if pi.vehicle.id in serviceable_vehicle_ids
+        ]
+        
+        # Create more to ensure good coverage for dashboard display
+        num_scheduled = min(20, len(serviceable_pre_inspections))
+        for i in range(num_scheduled):
+            # Find an unused pre-inspection for Serviceable vehicles only
+            available_pre_inspections = [pi for pi in serviceable_pre_inspections if pi.id not in used_pre_inspection_ids_in_run]
+            if not available_pre_inspections:
+                break
+                
+            pre_inspection = random.choice(available_pre_inspections)
+            used_pre_inspection_ids_in_run.add(pre_inspection.id)
             vehicle = pre_inspection.vehicle
-            base_date = datetime.now().date() - timedelta(days=random.randint(30, 365))
-            # Only create as non-completed - completed PMS requires post-inspections
-            completed_date = None
-            cost = None
-            if base_date < datetime.now().date():
-                status = 'Overdue'
+            
+            # Double-check vehicle is still Serviceable (it might have been changed during this run)
+            vehicle.refresh_from_db()
+            if vehicle.status != 'Serviceable':
+                continue  # Skip if vehicle is no longer Serviceable
+            
+            # Distribute dates to show various urgency levels on dashboard
+            # Some today/tomorrow for immediate visibility, some soon, some later
+            if i < 3:
+                days_ahead = 0  # Today - will show "PMS scheduled today"
+            elif i < 6:
+                days_ahead = 1  # Tomorrow - will show "PMS scheduled tomorrow"
+            elif i < 10:
+                days_ahead = random.randint(2, 7)  # Within 1 week - urgent
+            elif i < 15:
+                days_ahead = random.randint(8, 14)  # 1-2 weeks
             else:
-                status = random.choice(['Scheduled', 'In Progress'])
+                days_ahead = random.randint(15, 30)  # 2-4 weeks
+            scheduled_date = today + timedelta(days=days_ahead)
             
             PMS.objects.create(
                 vehicle=vehicle,
                 service_type='General Inspection',
-                scheduled_date=base_date,
-                completed_date=completed_date,
-                mileage_at_service=max(0, (vehicle.current_mileage or 0) - random.randint(1000, 5000)),
+                scheduled_date=scheduled_date,
+                completed_date=None,
+                mileage_at_service=(vehicle.current_mileage or 0) + random.randint(-500, 500),
                 next_service_mileage=(vehicle.current_mileage or 0) + random.randint(5000, 15000),
-                cost=cost,
+                cost=None,
                 provider=random.choice(providers),
-                technician=random.choice(['Juan Dela Cruz', 'Pedro Santos', 'Maria Garcia']),
-                description='Routine general inspection including engine, brakes, lights, and fluid levels.',
-                status=status,
-                pre_inspection=pre_inspection  # Link to pre-inspection
+                technician='',
+                description=random.choice(descriptions),
+                notes=random.choice(notes_options),
+                status='Scheduled',
+                pre_inspection=pre_inspection,
+                post_inspection=None,
+                repair=None
             )
-            created += 1
+            created_scheduled += 1
         
-        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created} PMS records'))
-
-    def create_pre_inspections(self):
-        """Create pre-inspection reports"""
-        vehicles = list(Vehicle.objects.all())
-        users = list(User.objects.all())
-        
-        if not vehicles or not users:
-            self.stdout.write(self.style.WARNING('  [-] Skipping pre-inspections (missing data)'))
-            return
-        
-        created = 0
-        selected_vehicles = random.sample(vehicles, min(20, len(vehicles)))
-        
-        # Create mix of repair and PMS pre-inspections (about 50/50 split)
-        for idx, vehicle in enumerate(selected_vehicles):
-            # First 10 are repairs, next 10 are PMS (if we have 20)
-            if idx < min(10, len(selected_vehicles)):
-                report_type = 'repair'
-            else:
-                report_type = 'pms'
+        # Create In Progress PMS (ongoing PMS) - ensure vehicles are set to "Under Repair" if Serviceable
+        # Use remaining pre-inspections (not necessarily Serviceable)
+        remaining_pre_inspections = [pi for pi in pre_inspections if pi.id not in used_pre_inspection_ids_in_run]
+        # Create more ongoing PMS for better sample data
+        num_in_progress = min(10, len(remaining_pre_inspections))
+        for i in range(num_in_progress):
+            # Find an unused pre-inspection
+            available_pre_inspections = [pi for pi in remaining_pre_inspections if pi.id not in used_pre_inspection_ids_in_run]
+            if not available_pre_inspections:
+                break
+                
+            pre_inspection = random.choice(available_pre_inspections)
+            used_pre_inspection_ids_in_run.add(pre_inspection.id)
+            vehicle = pre_inspection.vehicle
+            scheduled_date = today - timedelta(days=random.randint(1, 7))
             
-            pre_inspection = PreInspectionReport.objects.create(
+            pms = PMS.objects.create(
                 vehicle=vehicle,
-                report_type=report_type,
-                inspected_by=random.choice(users),
-                engine_condition=random.choice(['excellent', 'good', 'fair', 'poor']),
-                transmission_condition=random.choice(['excellent', 'good', 'fair']),
-                brakes_condition=random.choice(['excellent', 'good', 'fair']),
-                suspension_condition=random.choice(['excellent', 'good', 'fair']),
-                electrical_condition=random.choice(['excellent', 'good', 'fair']),
-                body_condition=random.choice(['excellent', 'good', 'fair']),
-                tires_condition=random.choice(['excellent', 'good', 'fair']),
-                lights_condition=random.choice(['excellent', 'good', 'fair']),
-                current_mileage=(vehicle.current_mileage or 0) + random.randint(-1000, 1000),
-                fuel_level=random.choice(['full', 'three_quarters', 'half', 'quarter']),
-                issues_found=f'Issues found during pre-inspection for {vehicle.plate_number}',
-                safety_concerns='No major safety concerns identified.',
-                recommended_actions=f'Recommended actions before {report_type}',
-                approved_by=random.choice(users),
-                approval_date=timezone.now() - timedelta(days=random.randint(1, 30)),
-                approval_notes=f'Pre-inspection approved for {report_type} work'
+                service_type='General Inspection',
+                scheduled_date=scheduled_date,
+                completed_date=None,
+                mileage_at_service=(vehicle.current_mileage or 0) - random.randint(100, 500),
+                next_service_mileage=(vehicle.current_mileage or 0) + random.randint(5000, 15000),
+                cost=Decimal(str(random.randint(2000, 8000))),
+                provider=random.choice(providers),
+                technician=random.choice(technicians),
+                description=random.choice(descriptions),
+                notes='PMS currently in progress',
+                status='In Progress',
+                pre_inspection=pre_inspection,
+                post_inspection=None,
+                repair=None
             )
-            created += 1
+            
+            # Update vehicle status to "Under Repair" if it's Serviceable
+            # (This follows the correct logic - PMS In Progress automatically changes vehicle status)
+            if vehicle.status == 'Serviceable':
+                vehicle.update_status('Under Repair', user=users[0] if users else None, reason=f'PMS in progress: {pms.service_type}', auto_update=True)
+            
+            created_in_progress += 1
         
-        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created} pre-inspection reports'))
+        # Create Overdue PMS (past scheduled date, not completed) - these will also show in "Near PMS"
+        # IMPORTANT: Filter to only use Serviceable vehicles that are STILL Serviceable
+        # (Some vehicles may have been changed to Under Repair by ongoing repairs/PMS, so re-check)
+        serviceable_vehicles_list = list(Vehicle.objects.filter(status='Serviceable'))
+        serviceable_pre_inspections_for_overdue = [
+            pi for pi in serviceable_pre_inspections 
+            if pi.vehicle.id in [v.id for v in serviceable_vehicles_list] and pi.id not in used_pre_inspection_ids_in_run
+        ]
+        
+        for i in range(min(10, len(serviceable_pre_inspections_for_overdue))):
+            # Find an unused pre-inspection for Serviceable vehicles only
+            available_pre_inspections = [pi for pi in serviceable_pre_inspections_for_overdue if pi.id not in used_pre_inspection_ids_in_run]
+            if not available_pre_inspections:
+                break
+                
+            pre_inspection = random.choice(available_pre_inspections)
+            used_pre_inspection_ids_in_run.add(pre_inspection.id)
+            vehicle = pre_inspection.vehicle
+            
+            # Double-check vehicle is still Serviceable (it might have been changed during this run)
+            vehicle.refresh_from_db()
+            if vehicle.status != 'Serviceable':
+                continue  # Skip if vehicle is no longer Serviceable
+            
+            # Vary overdue days: some recently overdue, some longer overdue
+            if i < 5:
+                days_overdue = random.randint(1, 7)  # Recently overdue (1-7 days)
+            else:
+                days_overdue = random.randint(8, 30)  # Longer overdue (8-30 days)
+            scheduled_date = today - timedelta(days=days_overdue)
+            
+            PMS.objects.create(
+                vehicle=vehicle,
+                service_type='General Inspection',
+                scheduled_date=scheduled_date,
+                completed_date=None,
+                mileage_at_service=(vehicle.current_mileage or 0) + random.randint(-500, 500),
+                next_service_mileage=(vehicle.current_mileage or 0) + random.randint(5000, 15000),
+                cost=None,
+                provider=random.choice(providers),
+                technician='',
+                description=random.choice(descriptions),
+                notes='PMS is overdue and needs rescheduling',
+                status='Overdue',
+                pre_inspection=pre_inspection,
+                post_inspection=None,
+                repair=None
+            )
+            created_overdue += 1
+        
+        # Create Cancelled PMS (can be any vehicle status)
+        # Use remaining pre-inspections
+        remaining_pre_inspections_for_cancel = [pi for pi in remaining_pre_inspections if pi.id not in used_pre_inspection_ids_in_run]
+        for i in range(min(3, len(remaining_pre_inspections_for_cancel))):
+            # Find an unused pre-inspection
+            available_pre_inspections = [pi for pi in remaining_pre_inspections_for_cancel if pi.id not in used_pre_inspection_ids_in_run]
+            if not available_pre_inspections:
+                break
+                
+            pre_inspection = random.choice(available_pre_inspections)
+            used_pre_inspection_ids_in_run.add(pre_inspection.id)
+            vehicle = pre_inspection.vehicle
+            scheduled_date = today - timedelta(days=random.randint(10, 90))
+            
+            PMS.objects.create(
+                vehicle=vehicle,
+                service_type='General Inspection',
+                scheduled_date=scheduled_date,
+                completed_date=None,
+                mileage_at_service=(vehicle.current_mileage or 0) + random.randint(-500, 500),
+                next_service_mileage=None,
+                cost=None,
+                provider=None,
+                technician=None,
+                description='PMS was cancelled',
+                notes='Cancelled due to vehicle unavailability',
+                status='Cancelled',
+                pre_inspection=pre_inspection,
+                post_inspection=None,
+                repair=None
+            )
+            created_cancelled += 1
+        
+        # Create Completed PMS (need post-inspections)
+        # Use only PMS-type post-inspections whose pre-inspections haven't been used in this run
+        pms_post_inspections = [
+            pi for pi in post_inspections 
+            if pi.report_type == 'pms' and pi.pre_inspection.id not in used_pre_inspection_ids_in_run
+        ]
+        num_completed = min(8, len(pms_post_inspections))
+        for i in range(num_completed):
+            # Find an available post-inspection with unused pre-inspection
+            available_post_inspections = [
+                pi for pi in pms_post_inspections 
+                if pi.pre_inspection.id not in used_pre_inspection_ids_in_run
+            ]
+            if not available_post_inspections:
+                break
+                
+            post_inspection = random.choice(available_post_inspections)
+            pre_inspection = post_inspection.pre_inspection
+            used_pre_inspection_ids_in_run.add(pre_inspection.id)
+            vehicle = post_inspection.vehicle
+            
+            days_ago = random.randint(10, 180)
+            scheduled_date = datetime.now().date() - timedelta(days=days_ago)
+            completed_date = scheduled_date + timedelta(days=random.randint(1, 5))
+            
+            PMS.objects.create(
+                vehicle=vehicle,
+                service_type='General Inspection',
+                scheduled_date=scheduled_date,
+                completed_date=completed_date,
+                mileage_at_service=(vehicle.current_mileage or 0) - random.randint(1000, 5000),
+                next_service_mileage=(vehicle.current_mileage or 0) + random.randint(5000, 15000),
+                cost=Decimal(str(random.randint(3000, 10000))),
+                provider=random.choice(providers),
+                technician=random.choice(technicians),
+                description=random.choice(descriptions),
+                notes='PMS completed successfully',
+                status='Completed',
+                pre_inspection=pre_inspection,
+                post_inspection=post_inspection,
+                repair=None
+            )
+            created_completed += 1
+        
+        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created_scheduled + created_in_progress + created_completed + created_overdue + created_cancelled} PMS records (Scheduled: {created_scheduled}, In Progress: {created_in_progress}, Completed: {created_completed}, Overdue: {created_overdue}, Cancelled: {created_cancelled})'))
+        self.stdout.write(self.style.SUCCESS(f'      -> {created_scheduled + created_overdue} PMS records for Serviceable vehicles (will appear in "Near PMS" dashboard)'))
 
     def create_post_inspections(self):
-        """Create post-inspection reports"""
-        pre_inspections = list(PreInspectionReport.objects.filter(approved_by__isnull=False))
+        """Create post-inspection reports linked to pre-inspections"""
+        # Get pre-inspections that are already used by repairs or PMS (from database)
+        used_pre_inspection_ids = set()
+        used_pre_inspection_ids.update(
+            Repair.objects.exclude(pre_inspection__isnull=True)
+                         .values_list('pre_inspection_id', flat=True)
+        )
+        used_pre_inspection_ids.update(
+            PMS.objects.exclude(pre_inspection__isnull=True)
+                      .values_list('pre_inspection_id', flat=True)
+        )
+        
+        # Get post-inspections that are already used (their pre-inspections are already linked)
+        used_post_inspection_ids = set()
+        used_post_inspection_ids.update(
+            Repair.objects.exclude(post_inspection__isnull=True)
+                         .values_list('post_inspection_id', flat=True)
+        )
+        used_post_inspection_ids.update(
+            PMS.objects.exclude(post_inspection__isnull=True)
+                      .values_list('post_inspection_id', flat=True)
+        )
+        
+        # Get available approved pre-inspections (not yet used and not linked to existing post-inspections)
+        available_pre_inspections = list(PreInspectionReport.objects.filter(
+            approved_by__isnull=False
+        ).exclude(id__in=used_pre_inspection_ids))
+        
         users = list(User.objects.all())
         
-        if not pre_inspections or not users:
-            self.stdout.write(self.style.WARNING('  [-] Skipping post-inspections (missing pre-inspections)'))
+        if not available_pre_inspections or not users:
+            self.stdout.write(self.style.WARNING('  [-] Skipping post-inspections (missing available pre-inspections)'))
             return
         
+        satisfaction_choices = ['excellent', 'good', 'satisfactory', 'needs_improvement']
+        condition_choices = ['excellent', 'good', 'fair']
+        
         created = 0
-        for pre_inspection in pre_inspections[:8]:  # Create for first 8 approved pre-inspections
+        # Split between repair and PMS types
+        repair_pre_inspections = [pi for pi in available_pre_inspections if pi.report_type == 'repair']
+        pms_pre_inspections = [pi for pi in available_pre_inspections if pi.report_type == 'pms']
+        
+        # Create post-inspections for repairs (10 total)
+        # Only create if we haven't exceeded and pre-inspection is available
+        for pre_inspection in repair_pre_inspections[:10]:
+            if pre_inspection.id in used_pre_inspection_ids:
+                continue
             post_inspection = PostInspectionReport.objects.create(
                 vehicle=pre_inspection.vehicle,
                 report_type=pre_inspection.report_type,
                 inspected_by=random.choice(users),
                 pre_inspection=pre_inspection,
                 work_completed_satisfactorily=True,
-                quality_of_work=random.choice(['excellent', 'good', 'satisfactory']),
-                timeliness=random.choice(['excellent', 'good', 'satisfactory']),
-                cleanliness=random.choice(['excellent', 'good', 'satisfactory']),
-                engine_condition=random.choice(['excellent', 'good']),
-                transmission_condition=random.choice(['excellent', 'good']),
-                brakes_condition=random.choice(['excellent', 'good']),
-                suspension_condition=random.choice(['excellent', 'good']),
-                electrical_condition=random.choice(['excellent', 'good']),
-                body_condition=random.choice(['excellent', 'good']),
-                tires_condition=random.choice(['excellent', 'good']),
-                lights_condition=random.choice(['excellent', 'good']),
+                quality_of_work=random.choice(satisfaction_choices),
+                timeliness=random.choice(satisfaction_choices),
+                cleanliness=random.choice(satisfaction_choices),
+                engine_condition=random.choice(condition_choices),
+                transmission_condition=random.choice(condition_choices),
+                brakes_condition=random.choice(condition_choices),
+                suspension_condition=random.choice(condition_choices),
+                electrical_condition=random.choice(condition_choices),
+                body_condition=random.choice(condition_choices),
+                tires_condition=random.choice(condition_choices),
+                lights_condition=random.choice(condition_choices),
                 test_drive_performed=True,
-                test_drive_distance=random.randint(5, 20),
-                test_drive_notes='Test drive completed successfully.',
-                remaining_issues='No remaining issues identified.',
-                future_recommendations='Monitor condition regularly.',
+                test_drive_distance=random.randint(5, 25),
+                test_drive_notes='Test drive completed successfully. Vehicle performed well.',
+                remaining_issues='No remaining issues identified. All work completed satisfactorily.',
+                future_recommendations='Continue regular maintenance schedule. Monitor condition regularly.',
+                warranty_notes='Standard warranty applies. Contact service center if issues arise.',
                 approved_by=random.choice(users),
-                approval_date=timezone.now() - timedelta(days=random.randint(0, 5)),
-                approval_notes='Post-inspection approved.'
+                approval_date=timezone.now() - timedelta(days=random.randint(0, 10)),
+                approval_notes='Post-inspection approved. Work completed to standards.'
             )
             created += 1
         
-        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created} post-inspection reports'))
+        # Create post-inspections for PMS (10 total)
+        # Only create if we haven't exceeded and pre-inspection is available
+        for pre_inspection in pms_pre_inspections[:10]:
+            if pre_inspection.id in used_pre_inspection_ids:
+                continue
+            post_inspection = PostInspectionReport.objects.create(
+                vehicle=pre_inspection.vehicle,
+                report_type=pre_inspection.report_type,
+                inspected_by=random.choice(users),
+                pre_inspection=pre_inspection,
+                work_completed_satisfactorily=True,
+                quality_of_work=random.choice(satisfaction_choices),
+                timeliness=random.choice(satisfaction_choices),
+                cleanliness=random.choice(satisfaction_choices),
+                engine_condition=random.choice(condition_choices),
+                transmission_condition=random.choice(condition_choices),
+                brakes_condition=random.choice(condition_choices),
+                suspension_condition=random.choice(condition_choices),
+                electrical_condition=random.choice(condition_choices),
+                body_condition=random.choice(condition_choices),
+                tires_condition=random.choice(condition_choices),
+                lights_condition=random.choice(condition_choices),
+                test_drive_performed=True,
+                test_drive_distance=random.randint(5, 20),
+                test_drive_notes='Test drive completed successfully. Vehicle ready for use.',
+                remaining_issues='No remaining issues. Vehicle is in good condition.',
+                future_recommendations='Schedule next PMS according to mileage or time interval.',
+                warranty_notes='Maintenance warranty in effect.',
+                approved_by=random.choice(users),
+                approval_date=timezone.now() - timedelta(days=random.randint(0, 10)),
+                approval_notes='Post-inspection approved. PMS completed successfully.'
+            )
+            created += 1
+        
+        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {created} post-inspection reports (Repair: {min(10, len(repair_pre_inspections))}, PMS: {min(10, len(pms_pre_inspections))})'))
 
     def create_notifications(self):
         """Create notifications"""
@@ -583,22 +1107,24 @@ class Command(BaseCommand):
             return
         
         notifications_data = [
-            ('PMS Reminder', 'Vehicle PMS is due for maintenance', 'pms_reminder'),
-            ('Repair Completed', 'Repair has been completed', 'repair_completed'),
-            ('Vehicle Status Change', 'Vehicle status changed to Under Repair', 'vehicle_status'),
-            ('Overdue PMS', 'Vehicle PMS is overdue', 'pms_overdue'),
-            ('General Notification', 'System maintenance scheduled', 'general'),
+            ('PMS Reminder', 'Vehicle PMS is due for maintenance within 1 month', 'pms_reminder', 'medium'),
+            ('Repair Completed', 'Repair has been completed successfully', 'repair_completed', 'low'),
+            ('Vehicle Status Change', 'Vehicle status changed to Under Repair', 'vehicle_status', 'high'),
+            ('Overdue PMS', 'Vehicle PMS is overdue and needs attention', 'pms_overdue', 'high'),
+            ('General Notification', 'System maintenance scheduled for next week', 'general', 'low'),
+            ('Inspection Approved', 'Pre-inspection report has been approved', 'inspection_approved', 'medium'),
+            ('PMS Scheduled', 'New PMS has been scheduled for your vehicle', 'pms_scheduled', 'low'),
         ]
         
         created = 0
-        for title, message, ntype in notifications_data * 3:  # Create 15 notifications
+        for title, message, ntype, priority in notifications_data * 5:  # Create 35 notifications
             Notification.objects.create(
                 user=random.choice(users),
                 notification_type=ntype,
                 title=title,
                 message=message,
-                priority=random.choice(['low', 'medium', 'high']),
-                is_read=random.choice([True, False]),
+                priority=priority,
+                is_read=random.choice([True, True, False]),  # 67% read
             )
             created += 1
         
@@ -610,16 +1136,31 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('DATABASE SUMMARY'))
         self.stdout.write(self.style.SUCCESS('=' * 70))
         
-        self.stdout.write(f'\n  Users: {User.objects.count()}')
+        self.stdout.write(f'\n  Users: {User.objects.count()} (Active: {User.objects.filter(status="active").count()}, Inactive: {User.objects.filter(status="inactive").count()})')
         self.stdout.write(f'  Divisions: {Division.objects.count()}')
         self.stdout.write(f'  Drivers: {Driver.objects.count()}')
         self.stdout.write(f'  Vehicles: {Vehicle.objects.count()}')
-        self.stdout.write(f'  Repair Shops: {RepairShop.objects.count()}')
-        self.stdout.write(f'  Repair Parts: {RepairPart.objects.count()}')
+        self.stdout.write(f'    - Serviceable: {Vehicle.objects.filter(status="Serviceable").count()}')
+        self.stdout.write(f'    - Under Repair: {Vehicle.objects.filter(status="Under Repair").count()}')
+        self.stdout.write(f'    - Unserviceable: {Vehicle.objects.filter(status="Unserviceable").count()}')
+        self.stdout.write(f'  Repair Shops: {RepairShop.objects.count()} (Active: {RepairShop.objects.filter(is_active=True).count()})')
+        self.stdout.write(f'  Repair Parts: {RepairPart.objects.count()} (Active: {RepairPart.objects.filter(is_active=True).count()})')
         self.stdout.write(f'  Repairs: {Repair.objects.count()}')
+        self.stdout.write(f'    - Ongoing: {Repair.objects.filter(status="Ongoing").count()}')
+        self.stdout.write(f'    - Completed: {Repair.objects.filter(status="Completed").count()}')
         self.stdout.write(f'  Repair Part Items: {RepairPartItem.objects.count()}')
         self.stdout.write(f'  PMS Records: {PMS.objects.count()}')
+        self.stdout.write(f'    - Scheduled: {PMS.objects.filter(status="Scheduled").count()}')
+        self.stdout.write(f'    - In Progress: {PMS.objects.filter(status="In Progress").count()}')
+        self.stdout.write(f'    - Completed: {PMS.objects.filter(status="Completed").count()}')
+        self.stdout.write(f'    - Overdue: {PMS.objects.filter(status="Overdue").count()}')
+        self.stdout.write(f'    - Cancelled: {PMS.objects.filter(status="Cancelled").count()}')
         self.stdout.write(f'  Pre-Inspections: {PreInspectionReport.objects.count()}')
+        self.stdout.write(f'    - Approved: {PreInspectionReport.objects.filter(approved_by__isnull=False).count()}')
+        self.stdout.write(f'    - Unapproved: {PreInspectionReport.objects.filter(approved_by__isnull=True).count()}')
+        self.stdout.write(f'    - Repair type: {PreInspectionReport.objects.filter(report_type="repair").count()}')
+        self.stdout.write(f'    - PMS type: {PreInspectionReport.objects.filter(report_type="pms").count()}')
         self.stdout.write(f'  Post-Inspections: {PostInspectionReport.objects.count()}')
+        self.stdout.write(f'    - Approved: {PostInspectionReport.objects.filter(approved_by__isnull=False).count()}')
+        self.stdout.write(f'    - Unapproved: {PostInspectionReport.objects.filter(approved_by__isnull=True).count()}')
         self.stdout.write(f'  Notifications: {Notification.objects.count()}')
-
