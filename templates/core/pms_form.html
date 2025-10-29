@@ -301,6 +301,99 @@ $(document).ready(function() {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Filter pre-inspection dropdown based on selected vehicle
+    const vehicleSelect = document.querySelector('#id_vehicle');
+    const preInspectionSelect = document.querySelector('#id_pre_inspection');
+    
+    if (vehicleSelect && preInspectionSelect) {
+        function updatePreInspectionOptions() {
+            const vehicleId = vehicleSelect.value;
+            
+            if (!vehicleId) {
+                // Clear options if no vehicle selected and disable dropdown
+                preInspectionSelect.innerHTML = '<option value="">Please select a vehicle first</option>';
+                preInspectionSelect.disabled = true;
+                return;
+            }
+            
+            // Enable dropdown
+            preInspectionSelect.disabled = false;
+            
+            // Show loading state
+            const currentValue = preInspectionSelect.value; // Save current selection before clearing
+            const originalOptions = Array.from(preInspectionSelect.options).map(opt => ({
+                value: opt.value,
+                text: opt.textContent
+            })); // Save original options before clearing
+            
+            preInspectionSelect.disabled = true;
+            preInspectionSelect.innerHTML = '<option value="">Loading...</option>';
+            
+            // Fetch pre-inspections for selected vehicle
+            fetch(`{% url 'get_pre_inspections_by_vehicle' %}?vehicle_id=${vehicleId}&report_type=pms`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error:', data.error);
+                        preInspectionSelect.innerHTML = '<option value="">Error loading inspections</option>';
+                    } else {
+                        // Clear existing options
+                        preInspectionSelect.innerHTML = '';
+                        
+                        // Add new options
+                        let foundCurrentSelection = false;
+                        data.options.forEach(option => {
+                            const optionElement = document.createElement('option');
+                            optionElement.value = option.id;
+                            optionElement.textContent = option.text;
+                            // Preserve selection if it matches (for edit mode)
+                            if (currentValue && option.id === currentValue) {
+                                optionElement.selected = true;
+                                foundCurrentSelection = true;
+                            }
+                            preInspectionSelect.appendChild(optionElement);
+                        });
+                        
+                        // If current selection wasn't found but exists, try to preserve it
+                        // This handles edge case where inspection might have been unlinked or filtered out
+                        if (currentValue && !foundCurrentSelection && currentValue !== '') {
+                            const originalSelectedOption = originalOptions.find(opt => opt.value === currentValue);
+                            if (originalSelectedOption) {
+                                const preserveOption = document.createElement('option');
+                                preserveOption.value = currentValue;
+                                preserveOption.textContent = originalSelectedOption.text;
+                                preserveOption.selected = true;
+                                preInspectionSelect.insertBefore(preserveOption, preInspectionSelect.firstChild);
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    preInspectionSelect.innerHTML = '<option value="">Error loading inspections</option>';
+                })
+                .finally(() => {
+                    preInspectionSelect.disabled = false;
+                });
+        }
+        
+        // Update when vehicle changes
+        vehicleSelect.addEventListener('change', function() {
+            // Clear current selection when vehicle changes
+            preInspectionSelect.value = '';
+            updatePreInspectionOptions();
+        });
+        
+        // If vehicle is already selected on page load (edit mode or pre-selected), update options
+        if (vehicleSelect.value) {
+            updatePreInspectionOptions();
+        } else {
+            // In create mode with no vehicle selected, disable pre-inspection dropdown
+            preInspectionSelect.disabled = true;
+            preInspectionSelect.innerHTML = '<option value="">Please select a vehicle first</option>';
+        }
+    }
+    
     // Formatting functions for cost fields (must be defined first)
     function formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");

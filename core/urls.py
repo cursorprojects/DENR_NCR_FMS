@@ -80,6 +80,7 @@ urlpatterns = [
     path('pre-inspections/<int:pk>/', views.pre_inspection_detail, name='pre_inspection_detail'),
     path('pre-inspections/<int:pk>/edit/', views.pre_inspection_edit, name='pre_inspection_edit'),
     path('pre-inspections/<int:pk>/approve/', views.pre_inspection_approve, name='pre_inspection_approve'),
+    path('pre-inspections/<int:pk>/delete/', views.pre_inspection_delete, name='pre_inspection_delete'),
     
     # Post-Inspection Reports
     path('post-inspections/', views.post_inspection_list, name='post_inspection_list'),
@@ -87,4 +88,8 @@ urlpatterns = [
     path('post-inspections/<int:pk>/', views.post_inspection_detail, name='post_inspection_detail'),
     path('post-inspections/<int:pk>/edit/', views.post_inspection_edit, name='post_inspection_edit'),
     path('post-inspections/<int:pk>/approve/', views.post_inspection_approve, name='post_inspection_approve'),
+    path('post-inspections/<int:pk>/delete/', views.post_inspection_delete, name='post_inspection_delete'),
+    
+    # AJAX endpoints
+    path('api/pre-inspections-by-vehicle/', views.get_pre_inspections_by_vehicle, name='get_pre_inspections_by_vehicle'),
 ]

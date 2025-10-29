@@ -417,6 +417,58 @@ class Repair(models.Model):
                 "The post-inspection report must be approved before marking repair as completed. "
                 "Please approve the post-inspection report first."
             )
+        
+        # Rule 5: Pre-inspection vehicle must match repair vehicle
+        if self.pre_inspection and self.vehicle:
+            if self.pre_inspection.vehicle != self.vehicle:
+                raise ValidationError(
+                    f"The pre-inspection report is for vehicle {self.pre_inspection.vehicle.plate_number}, "
+                    f"but this repair is for vehicle {self.vehicle.plate_number}. "
+                    "The pre-inspection report must be for the same vehicle as the repair."
+                )
+        
+        # Rule 6: Post-inspection vehicle must match repair vehicle
+        if self.post_inspection and self.vehicle:
+            if self.post_inspection.vehicle != self.vehicle:
+                raise ValidationError(
+                    f"The post-inspection report is for vehicle {self.post_inspection.vehicle.plate_number}, "
+                    f"but this repair is for vehicle {self.vehicle.plate_number}. "
+                    "The post-inspection report must be for the same vehicle as the repair."
+                )
+        
+        # Rule 7: Pre-inspection can only be used once (by one repair or one PMS)
+        if self.pre_inspection:
+            existing_repair = Repair.objects.filter(pre_inspection=self.pre_inspection).exclude(pk=self.pk if self.pk else None).first()
+            existing_pms = PMS.objects.filter(pre_inspection=self.pre_inspection).first()
+            
+            if existing_repair:
+                raise ValidationError(
+                    f"This pre-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each pre-inspection report can only be used once."
+                )
+            
+            if existing_pms:
+                raise ValidationError(
+                    f"This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    "Each pre-inspection report can only be used once."
+                )
+        
+        # Rule 8: Post-inspection can only be used once (by one repair or one PMS)
+        if self.post_inspection:
+            existing_repair = Repair.objects.filter(post_inspection=self.post_inspection).exclude(pk=self.pk if self.pk else None).first()
+            existing_pms = PMS.objects.filter(post_inspection=self.post_inspection).first()
+            
+            if existing_repair:
+                raise ValidationError(
+                    f"This post-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each post-inspection report can only be used once."
+                )
+            
+            if existing_pms:
+                raise ValidationError(
+                    f"This post-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    "Each post-inspection report can only be used once."
+                )
     
     class Meta:
         ordering = ['-date_of_repair', '-created_at']
@@ -824,6 +876,58 @@ class PMS(models.Model):
                 "The post-inspection report must be approved before marking PMS as completed. "
                 "Please approve the post-inspection report first."
             )
+        
+        # Rule 5: Pre-inspection vehicle must match PMS vehicle
+        if self.pre_inspection and self.vehicle:
+            if self.pre_inspection.vehicle != self.vehicle:
+                raise ValidationError(
+                    f"The pre-inspection report is for vehicle {self.pre_inspection.vehicle.plate_number}, "
+                    f"but this PMS is for vehicle {self.vehicle.plate_number}. "
+                    "The pre-inspection report must be for the same vehicle as the PMS."
+                )
+        
+        # Rule 6: Post-inspection vehicle must match PMS vehicle
+        if self.post_inspection and self.vehicle:
+            if self.post_inspection.vehicle != self.vehicle:
+                raise ValidationError(
+                    f"The post-inspection report is for vehicle {self.post_inspection.vehicle.plate_number}, "
+                    f"but this PMS is for vehicle {self.vehicle.plate_number}. "
+                    "The post-inspection report must be for the same vehicle as the PMS."
+                )
+        
+        # Rule 7: Pre-inspection can only be used once (by one repair or one PMS)
+        if self.pre_inspection:
+            existing_repair = Repair.objects.filter(pre_inspection=self.pre_inspection).first()
+            existing_pms = PMS.objects.filter(pre_inspection=self.pre_inspection).exclude(pk=self.pk if self.pk else None).first()
+            
+            if existing_repair:
+                raise ValidationError(
+                    f"This pre-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each pre-inspection report can only be used once."
+                )
+            
+            if existing_pms:
+                raise ValidationError(
+                    f"This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    "Each pre-inspection report can only be used once."
+                )
+        
+        # Rule 8: Post-inspection can only be used once (by one repair or one PMS)
+        if self.post_inspection:
+            existing_repair = Repair.objects.filter(post_inspection=self.post_inspection).first()
+            existing_pms = PMS.objects.filter(post_inspection=self.post_inspection).exclude(pk=self.pk if self.pk else None).first()
+            
+            if existing_repair:
+                raise ValidationError(
+                    f"This post-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each post-inspection report can only be used once."
+                )
+            
+            if existing_pms:
+                raise ValidationError(
+                    f"This post-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    "Each post-inspection report can only be used once."
+                )
     
     class Meta:
         verbose_name = 'Preventive Maintenance Service'

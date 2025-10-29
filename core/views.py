@@ -1274,7 +1274,75 @@ def pms_delete(request, pk):
 def pre_inspection_list(request):
     """List all pre-inspection reports"""
     reports = PreInspectionReport.objects.all().order_by('-inspection_date')
-    return render(request, 'core/pre_inspection_list.html', {'reports': reports})
+    
+    # Get filter parameters
+    availability_filter = request.GET.get('availability', '')
+    vehicle_filter = request.GET.get('vehicle', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Apply filters
+    if availability_filter == 'used':
+        # Get IDs of reports used by repairs or PMS
+        used_repair_ids = Repair.objects.exclude(pre_inspection__isnull=True).values_list('pre_inspection_id', flat=True)
+        used_pms_ids = PMS.objects.exclude(pre_inspection__isnull=True).values_list('pre_inspection_id', flat=True)
+        used_ids = set(list(used_repair_ids) + list(used_pms_ids))
+        reports = reports.filter(id__in=used_ids)
+    elif availability_filter == 'available':
+        # Get IDs of reports used by repairs or PMS
+        used_repair_ids = Repair.objects.exclude(pre_inspection__isnull=True).values_list('pre_inspection_id', flat=True)
+        used_pms_ids = PMS.objects.exclude(pre_inspection__isnull=True).values_list('pre_inspection_id', flat=True)
+        used_ids = set(list(used_repair_ids) + list(used_pms_ids))
+        reports = reports.exclude(id__in=used_ids)
+    
+    if vehicle_filter:
+        reports = reports.filter(vehicle_id=vehicle_filter)
+    
+    if date_from:
+        try:
+            from django.utils.dateparse import parse_datetime
+            date_from_obj = parse_datetime(date_from) if 'T' in date_from else datetime.strptime(date_from, '%Y-%m-%d')
+            if date_from_obj:
+                reports = reports.filter(inspection_date__gte=date_from_obj)
+        except (ValueError, TypeError):
+            pass
+    
+    if date_to:
+        try:
+            from django.utils.dateparse import parse_datetime
+            date_to_obj = parse_datetime(date_to) if 'T' in date_to else datetime.strptime(date_to, '%Y-%m-%d')
+            if date_to_obj:
+                # Add one day to include the full day
+                from datetime import timedelta
+                date_to_obj = date_to_obj + timedelta(days=1)
+                reports = reports.filter(inspection_date__lt=date_to_obj)
+        except (ValueError, TypeError):
+            pass
+    
+    # Annotate each report with usage information
+    for report in reports:
+        # Check if used by a repair
+        repair_usage = Repair.objects.filter(pre_inspection=report).first()
+        # Check if used by a PMS
+        pms_usage = PMS.objects.filter(pre_inspection=report).first()
+        
+        report.used_by_repair = repair_usage
+        report.used_by_pms = pms_usage
+        report.is_used = repair_usage is not None or pms_usage is not None
+    
+    # Get all vehicles for filter dropdown
+    vehicles = Vehicle.objects.all().order_by('plate_number')
+    
+    context = {
+        'reports': reports,
+        'vehicles': vehicles,
+        'availability_filter': availability_filter,
+        'vehicle_filter': vehicle_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    
+    return render(request, 'core/pre_inspection_list.html', context)
 
 
 @login_required
@@ -1371,10 +1439,112 @@ def pre_inspection_approve(request, pk):
 
 
 @login_required
+def pre_inspection_delete(request, pk):
+    """Delete pre-inspection report if it's not used"""
+    report = get_object_or_404(PreInspectionReport, pk=pk)
+    
+    # Check if report is used
+    repair_usage = Repair.objects.filter(pre_inspection=report).first()
+    pms_usage = PMS.objects.filter(pre_inspection=report).first()
+    
+    if repair_usage or pms_usage:
+        messages.error(
+            request, 
+            f'Cannot delete this pre-inspection report because it is already used by a {"repair" if repair_usage else "PMS"} record.'
+        )
+        return redirect('pre_inspection_detail', pk=pk)
+    
+    if request.method == 'POST':
+        # Log activity before deletion
+        ActivityLog.objects.create(
+            user=request.user,
+            action='delete',
+            model_name='PreInspectionReport',
+            object_id=report.id,
+            description=f'Deleted pre-inspection report for {report.vehicle.plate_number} - {report.get_report_type_display()}',
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        report.delete()
+        messages.success(request, 'Pre-inspection report deleted successfully!')
+        return redirect('pre_inspection_list')
+    
+    return render(request, 'core/pre_inspection_delete.html', {'report': report})
+
+
+@login_required
 def post_inspection_list(request):
     """List all post-inspection reports"""
     reports = PostInspectionReport.objects.all().order_by('-inspection_date')
-    return render(request, 'core/post_inspection_list.html', {'reports': reports})
+    
+    # Get filter parameters
+    availability_filter = request.GET.get('availability', '')
+    vehicle_filter = request.GET.get('vehicle', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Apply filters
+    if availability_filter == 'used':
+        # Get IDs of reports used by repairs or PMS
+        used_repair_ids = Repair.objects.exclude(post_inspection__isnull=True).values_list('post_inspection_id', flat=True)
+        used_pms_ids = PMS.objects.exclude(post_inspection__isnull=True).values_list('post_inspection_id', flat=True)
+        used_ids = set(list(used_repair_ids) + list(used_pms_ids))
+        reports = reports.filter(id__in=used_ids)
+    elif availability_filter == 'available':
+        # Get IDs of reports used by repairs or PMS
+        used_repair_ids = Repair.objects.exclude(post_inspection__isnull=True).values_list('post_inspection_id', flat=True)
+        used_pms_ids = PMS.objects.exclude(post_inspection__isnull=True).values_list('post_inspection_id', flat=True)
+        used_ids = set(list(used_repair_ids) + list(used_pms_ids))
+        reports = reports.exclude(id__in=used_ids)
+    
+    if vehicle_filter:
+        reports = reports.filter(vehicle_id=vehicle_filter)
+    
+    if date_from:
+        try:
+            from django.utils.dateparse import parse_datetime
+            date_from_obj = parse_datetime(date_from) if 'T' in date_from else datetime.strptime(date_from, '%Y-%m-%d')
+            if date_from_obj:
+                reports = reports.filter(inspection_date__gte=date_from_obj)
+        except (ValueError, TypeError):
+            pass
+    
+    if date_to:
+        try:
+            from django.utils.dateparse import parse_datetime
+            date_to_obj = parse_datetime(date_to) if 'T' in date_to else datetime.strptime(date_to, '%Y-%m-%d')
+            if date_to_obj:
+                # Add one day to include the full day
+                from datetime import timedelta
+                date_to_obj = date_to_obj + timedelta(days=1)
+                reports = reports.filter(inspection_date__lt=date_to_obj)
+        except (ValueError, TypeError):
+            pass
+    
+    # Annotate each report with usage information
+    for report in reports:
+        # Check if used by a repair
+        repair_usage = Repair.objects.filter(post_inspection=report).first()
+        # Check if used by a PMS
+        pms_usage = PMS.objects.filter(post_inspection=report).first()
+        
+        report.used_by_repair = repair_usage
+        report.used_by_pms = pms_usage
+        report.is_used = repair_usage is not None or pms_usage is not None
+    
+    # Get all vehicles for filter dropdown
+    vehicles = Vehicle.objects.all().order_by('plate_number')
+    
+    context = {
+        'reports': reports,
+        'vehicles': vehicles,
+        'availability_filter': availability_filter,
+        'vehicle_filter': vehicle_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    
+    return render(request, 'core/post_inspection_list.html', context)
 
 
 @login_required
@@ -1471,6 +1641,40 @@ def post_inspection_approve(request, pk):
 
 
 @login_required
+def post_inspection_delete(request, pk):
+    """Delete post-inspection report if it's not used"""
+    report = get_object_or_404(PostInspectionReport, pk=pk)
+    
+    # Check if report is used
+    repair_usage = Repair.objects.filter(post_inspection=report).first()
+    pms_usage = PMS.objects.filter(post_inspection=report).first()
+    
+    if repair_usage or pms_usage:
+        messages.error(
+            request, 
+            f'Cannot delete this post-inspection report because it is already used by a {"repair" if repair_usage else "PMS"} record.'
+        )
+        return redirect('post_inspection_detail', pk=pk)
+    
+    if request.method == 'POST':
+        # Log activity before deletion
+        ActivityLog.objects.create(
+            user=request.user,
+            action='delete',
+            model_name='PostInspectionReport',
+            object_id=report.id,
+            description=f'Deleted post-inspection report for {report.vehicle.plate_number} - {report.get_report_type_display()}',
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        report.delete()
+        messages.success(request, 'Post-inspection report deleted successfully!')
+        return redirect('post_inspection_list')
+    
+    return render(request, 'core/post_inspection_delete.html', {'report': report})
+
+
+@login_required
 def system_manual(request):
     """Display system process flow and manual"""
     return render(request, 'core/system_manual.html')
@@ -1564,3 +1768,49 @@ def pms_complete(request, pk):
         'post_inspection': pms.post_inspection,
     }
     return render(request, 'core/pms_complete.html', context)
+
+
+@login_required
+def get_pre_inspections_by_vehicle(request):
+    """AJAX endpoint to get pre-inspection reports filtered by vehicle and report type"""
+    vehicle_id = request.GET.get('vehicle_id')
+    report_type = request.GET.get('report_type', 'repair')  # 'repair' or 'pms'
+    
+    if not vehicle_id:
+        return JsonResponse({'error': 'vehicle_id is required'}, status=400)
+    
+    try:
+        # Get used pre-inspection IDs
+        used_pre_inspection_ids = set()
+        
+        # Get pre-inspections used by other repairs
+        used_pre_inspection_ids.update(
+            Repair.objects.exclude(pre_inspection__isnull=True)
+                         .values_list('pre_inspection_id', flat=True)
+        )
+        
+        # Get pre-inspections used by PMS
+        used_pre_inspection_ids.update(
+            PMS.objects.exclude(pre_inspection__isnull=True)
+                      .values_list('pre_inspection_id', flat=True)
+        )
+        
+        # Get available pre-inspections for the vehicle and report type
+        pre_inspections = PreInspectionReport.objects.filter(
+            vehicle_id=vehicle_id,
+            report_type=report_type,
+            approved_by__isnull=False
+        ).exclude(id__in=used_pre_inspection_ids).order_by('-inspection_date')
+        
+        # Format as options for select dropdown
+        options = [{'id': '', 'text': 'Select an approved pre-inspection report...'}]
+        for inspection in pre_inspections:
+            options.append({
+                'id': inspection.id,
+                'text': f"{inspection.vehicle.plate_number} - {inspection.inspection_date.strftime('%Y-%m-%d')}"
+            })
+        
+        return JsonResponse({'options': options}, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

@@ -134,16 +134,39 @@ class RepairForm(forms.ModelForm):
         self.fields['repair_shop'].queryset = RepairShop.objects.filter(is_active=True)
         self.fields['repair_shop'].empty_label = "Select a repair shop..."
         
-        # Filter pre-inspections to only show approved ones for repairs
-        self.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(
+        # Filter pre-inspections to only show approved ones for repairs that are not already used
+        # Exclude pre-inspections already used by other repairs or PMS (but allow if it's the current repair)
+        used_pre_inspection_ids = set()
+        
+        # Get pre-inspections used by other repairs
+        used_pre_inspection_ids.update(
+            Repair.objects.exclude(pk=self.instance.pk if self.instance.pk else None)
+                         .exclude(pre_inspection__isnull=True)
+                         .values_list('pre_inspection_id', flat=True)
+        )
+        
+        # Get pre-inspections used by PMS
+        used_pre_inspection_ids.update(
+            PMS.objects.exclude(pre_inspection__isnull=True)
+                      .values_list('pre_inspection_id', flat=True)
+        )
+        
+        # Start with base queryset - will filter by vehicle if instance has vehicle
+        base_queryset = PreInspectionReport.objects.filter(
             report_type='repair',
             approved_by__isnull=False
-        ).order_by('-inspection_date')
+        ).exclude(id__in=used_pre_inspection_ids)
+        
+        # If editing and vehicle exists, filter by vehicle
+        if self.instance.pk and self.instance.vehicle:
+            base_queryset = base_queryset.filter(vehicle=self.instance.vehicle)
+        
+        self.fields['pre_inspection'].queryset = base_queryset.order_by('-inspection_date')
         self.fields['pre_inspection'].empty_label = "Select an approved pre-inspection report..."
         self.fields['pre_inspection'].required = True
         
         # Add help text
-        self.fields['pre_inspection'].help_text = "Required: Select an approved pre-inspection report for repairs"
+        self.fields['pre_inspection'].help_text = "Required: Select an approved pre-inspection report for repairs (can only be used once)"
         
         # Disable status field if repair is completed or if no post-inspection exists
         if self.instance.pk:
@@ -160,13 +183,64 @@ class RepairForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         pre_inspection = cleaned_data.get('pre_inspection')
+        vehicle = cleaned_data.get('vehicle')
         status = cleaned_data.get('status')
         
         # Additional validation
-        if pre_inspection and not pre_inspection.is_approved:
-            raise forms.ValidationError(
-                "The selected pre-inspection report must be approved before creating a repair."
-            )
+        if pre_inspection:
+            if not pre_inspection.is_approved:
+                raise forms.ValidationError(
+                    "The selected pre-inspection report must be approved before creating a repair."
+                )
+            
+            # Check if pre-inspection vehicle matches repair vehicle
+            if vehicle and pre_inspection.vehicle != vehicle:
+                raise forms.ValidationError(
+                    f"The selected pre-inspection report is for vehicle {pre_inspection.vehicle.plate_number}, "
+                    f"but this repair is for vehicle {vehicle.plate_number}. "
+                    "The pre-inspection report must be for the same vehicle as the repair."
+                )
+            
+            # Check if pre-inspection is already used by another repair or PMS
+            existing_repair = Repair.objects.filter(pre_inspection=pre_inspection).exclude(pk=self.instance.pk if self.instance.pk else None).first()
+            existing_pms = PMS.objects.filter(pre_inspection=pre_inspection).first()
+            
+            if existing_repair:
+                raise forms.ValidationError(
+                    f"This pre-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each pre-inspection report can only be used once."
+                )
+            
+            if existing_pms:
+                raise forms.ValidationError(
+                    f"This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    "Each pre-inspection report can only be used once."
+                )
+        
+        # Check if post-inspection vehicle matches repair vehicle (if post_inspection exists)
+        if self.instance.pk and self.instance.post_inspection:
+            if vehicle and self.instance.post_inspection.vehicle != vehicle:
+                raise forms.ValidationError(
+                    f"The linked post-inspection report is for vehicle {self.instance.post_inspection.vehicle.plate_number}, "
+                    f"but this repair is for vehicle {vehicle.plate_number}. "
+                    "The post-inspection report must be for the same vehicle as the repair."
+                )
+            
+            # Check if post-inspection is already used by another repair or PMS
+            existing_repair = Repair.objects.filter(post_inspection=self.instance.post_inspection).exclude(pk=self.instance.pk).first()
+            existing_pms = PMS.objects.filter(post_inspection=self.instance.post_inspection).first()
+            
+            if existing_repair:
+                raise forms.ValidationError(
+                    f"This post-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each post-inspection report can only be used once."
+                )
+            
+            if existing_pms:
+                raise forms.ValidationError(
+                    f"This post-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    "Each post-inspection report can only be used once."
+                )
         
         if status == 'Completed' and not self.instance.post_inspection:
             raise forms.ValidationError(
@@ -242,16 +316,39 @@ class PMSForm(forms.ModelForm):
         self.fields['service_type'].initial = 'General Inspection'
         self.fields['service_type'].required = False
         
-        # Filter pre-inspections to only show approved ones for PMS
-        self.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(
+        # Filter pre-inspections to only show approved ones for PMS that are not already used
+        # Exclude pre-inspections already used by other repairs or PMS (but allow if it's the current PMS)
+        used_pre_inspection_ids = set()
+        
+        # Get pre-inspections used by repairs
+        used_pre_inspection_ids.update(
+            Repair.objects.exclude(pre_inspection__isnull=True)
+                         .values_list('pre_inspection_id', flat=True)
+        )
+        
+        # Get pre-inspections used by other PMS records
+        used_pre_inspection_ids.update(
+            PMS.objects.exclude(pk=self.instance.pk if self.instance.pk else None)
+                      .exclude(pre_inspection__isnull=True)
+                      .values_list('pre_inspection_id', flat=True)
+        )
+        
+        # Start with base queryset - will filter by vehicle if instance has vehicle
+        base_queryset = PreInspectionReport.objects.filter(
             report_type='pms',
             approved_by__isnull=False
-        ).order_by('-inspection_date')
+        ).exclude(id__in=used_pre_inspection_ids)
+        
+        # If editing and vehicle exists, filter by vehicle
+        if self.instance.pk and self.instance.vehicle:
+            base_queryset = base_queryset.filter(vehicle=self.instance.vehicle)
+        
+        self.fields['pre_inspection'].queryset = base_queryset.order_by('-inspection_date')
         self.fields['pre_inspection'].empty_label = "Select an approved pre-inspection report..."
         self.fields['pre_inspection'].required = True
         
         # Add help text
-        self.fields['pre_inspection'].help_text = "Required: Select an approved pre-inspection report for PMS"
+        self.fields['pre_inspection'].help_text = "Required: Select an approved pre-inspection report for PMS (can only be used once)"
         
         # Disable status field if PMS is completed or if no post-inspection exists
         if self.instance.pk:
@@ -276,13 +373,64 @@ class PMSForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         pre_inspection = cleaned_data.get('pre_inspection')
+        vehicle = cleaned_data.get('vehicle')
         status = cleaned_data.get('status')
         
         # Additional validation
-        if pre_inspection and not pre_inspection.is_approved:
-            raise forms.ValidationError(
-                "The selected pre-inspection report must be approved before creating a PMS record."
-            )
+        if pre_inspection:
+            if not pre_inspection.is_approved:
+                raise forms.ValidationError(
+                    "The selected pre-inspection report must be approved before creating a PMS record."
+                )
+            
+            # Check if pre-inspection vehicle matches PMS vehicle
+            if vehicle and pre_inspection.vehicle != vehicle:
+                raise forms.ValidationError(
+                    f"The selected pre-inspection report is for vehicle {pre_inspection.vehicle.plate_number}, "
+                    f"but this PMS is for vehicle {vehicle.plate_number}. "
+                    "The pre-inspection report must be for the same vehicle as the PMS."
+                )
+            
+            # Check if pre-inspection is already used by another repair or PMS
+            existing_repair = Repair.objects.filter(pre_inspection=pre_inspection).first()
+            existing_pms = PMS.objects.filter(pre_inspection=pre_inspection).exclude(pk=self.instance.pk if self.instance.pk else None).first()
+            
+            if existing_repair:
+                raise forms.ValidationError(
+                    f"This pre-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each pre-inspection report can only be used once."
+                )
+            
+            if existing_pms:
+                raise forms.ValidationError(
+                    f"This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    "Each pre-inspection report can only be used once."
+                )
+        
+        # Check if post-inspection vehicle matches PMS vehicle (if post_inspection exists)
+        if self.instance.pk and self.instance.post_inspection:
+            if vehicle and self.instance.post_inspection.vehicle != vehicle:
+                raise forms.ValidationError(
+                    f"The linked post-inspection report is for vehicle {self.instance.post_inspection.vehicle.plate_number}, "
+                    f"but this PMS is for vehicle {vehicle.plate_number}. "
+                    "The post-inspection report must be for the same vehicle as the PMS."
+                )
+            
+            # Check if post-inspection is already used by another repair or PMS
+            existing_repair = Repair.objects.filter(post_inspection=self.instance.post_inspection).first()
+            existing_pms = PMS.objects.filter(post_inspection=self.instance.post_inspection).exclude(pk=self.instance.pk).first()
+            
+            if existing_repair:
+                raise forms.ValidationError(
+                    f"This post-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each post-inspection report can only be used once."
+                )
+            
+            if existing_pms:
+                raise forms.ValidationError(
+                    f"This post-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    "Each post-inspection report can only be used once."
+                )
         
         if status == 'Completed' and not self.instance.post_inspection:
             raise forms.ValidationError(
