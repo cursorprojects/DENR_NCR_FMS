@@ -219,7 +219,7 @@
                     {% if user.is_authenticated %}
                     <!-- Notifications -->
                     <li class="nav-item dropdown me-3">
-                        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" title="Click to view notifications">
                             <i class="bi bi-bell"></i>
                             {% if unread_count and unread_count > 0 %}
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
@@ -312,7 +312,10 @@
                             {% else %}
                                 <li class="dropdown-item-text p-4 text-center">
                                     <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
-                                    <p class="text-muted mb-0 mt-2">No new notifications</p>
+                                    <p class="text-muted mb-3 mt-2">No new notifications</p>
+                                    <a href="{% url 'notifications' %}" class="btn btn-primary">
+                                        <i class="bi bi-list-ul"></i> View All Notifications
+                                    </a>
                                 </li>
                             {% endif %}
                         </ul>
