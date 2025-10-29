@@ -66,8 +66,12 @@
                     </ul>
 
                     <div class="alert alert-info" role="alert">
-                        <h6><i class="bi bi-lightbulb"></i> Important Note</h6>
-                        <p class="mb-0">All repair and PMS processes require proper inspection workflow. You cannot complete repairs or PMS without approved pre and post-inspection reports.</p>
+                        <h6><i class="bi bi-lightbulb"></i> Important Notes</h6>
+                        <ul class="mb-0">
+                            <li>All repair and PMS processes require proper inspection workflow. You cannot complete repairs or PMS without approved pre and post-inspection reports.</li>
+                            <li>Vehicles marked "For Disposal" cannot have new repairs or PMS added. Check vehicle disposal usage percentage on the vehicle list.</li>
+                            <li>Always set the acquisition cost when adding vehicles, as it's required for the disposal threshold calculation.</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -85,9 +89,19 @@
                         <li>Fill in all required information:
                             <ul>
                                 <li>Plate Number (unique identifier)</li>
-                                <li>Vehicle Type, Make, Model, Year</li>
+                                <li>Vehicle Type: Select from available options:
+                                    <ul>
+                                        <li><strong>SEDAN</strong></li>
+                                        <li><strong>SUV</strong></li>
+                                        <li><strong>TRUCK</strong></li>
+                                        <li><strong>PICK UP</strong></li>
+                                        <li><strong>MOTORCYCLE</strong></li>
+                                        <li><strong>CLOSE VAN</strong></li>
+                                    </ul>
+                                </li>
+                                <li>Make, Model, Year</li>
                                 <li>Engine and Chassis Numbers</li>
-                                <li>Acquisition details and cost</li>
+                                <li>Acquisition details and cost (required for disposal threshold calculation)</li>
                                 <li>Current mileage and status</li>
                             </ul>
                         </li>
@@ -113,9 +127,49 @@
                     <ol>
                         <li>From vehicle detail page, click <strong>"Change Status"</strong> button</li>
                         <li>Select new status and provide reason</li>
+                        <li>Available statuses:
+                            <ul>
+                                <li><strong>Serviceable:</strong> Vehicle is operational and ready for use</li>
+                                <li><strong>Under Repair:</strong> Vehicle is currently being repaired</li>
+                                <li><strong>Unserviceable:</strong> Vehicle is not operational</li>
+                                <li><strong>For Disposal:</strong> Vehicle has exceeded disposal threshold (automatic or manual)</li>
+                            </ul>
+                        </li>
                         <li>Click <strong>"Update Status"</strong></li>
                         <li>Status change will be logged with timestamp and user</li>
                     </ol>
+
+                    <h6>Vehicle Disposal & Overuse Condition:</h6>
+                    <div class="alert alert-warning" role="alert">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Important</h6>
+                        <p>The system automatically monitors vehicle repair costs and marks vehicles for disposal when they reach the overuse threshold.</p>
+                    </div>
+                    <p><strong>Disposal Threshold Formula:</strong></p>
+                    <ul>
+                        <li>x = Acquisition Cost ÷ 2</li>
+                        <li>Threshold = 30% of x (or 15% of acquisition cost)</li>
+                        <li>Vehicle is marked <strong>"For Disposal"</strong> when total repair costs ≥ threshold</li>
+                    </ul>
+                    <p><strong>Disposal Status Effects:</strong></p>
+                    <ul>
+                        <li>Vehicles marked "For Disposal" cannot have new repairs or PMS added</li>
+                        <li>The system will automatically mark vehicles when threshold is exceeded</li>
+                        <li>Vehicles can be manually marked for disposal by changing status</li>
+                    </ul>
+                    <p><strong>Viewing Disposal Usage:</strong></p>
+                    <ul>
+                        <li>Vehicle list shows a <strong>"Disposal Usage"</strong> column with percentage indicator</li>
+                        <li>Progress bar shows:
+                            <ul>
+                                <li><span class="badge bg-success">Green</span>: Below 50% of threshold</li>
+                                <li><span class="badge bg-info">Blue</span>: 50-79% of threshold</li>
+                                <li><span class="badge bg-warning">Yellow</span>: 80-99% of threshold (Near Threshold)</li>
+                                <li><span class="badge bg-danger">Red</span>: 100% or above (Exceeded Threshold)</li>
+                            </ul>
+                        </li>
+                        <li>Total repair costs and threshold amount are displayed</li>
+                        <li>Vehicles exceeding threshold are highlighted in red on the vehicle list</li>
+                    </ul>
                 </div>
             </div>
 
@@ -127,7 +181,11 @@
                 <div class="card-body">
                     <div class="alert alert-warning" role="alert">
                         <h6><i class="bi bi-exclamation-triangle"></i> Important</h6>
-                        <p class="mb-0">Repairs require a complete inspection workflow. You cannot create a repair without an approved pre-inspection report, and you cannot mark a repair as completed without an approved post-inspection report.</p>
+                        <ul class="mb-0">
+                            <li>Repairs require a complete inspection workflow. You cannot create a repair without an approved pre-inspection report, and you cannot mark a repair as completed without an approved post-inspection report.</li>
+                            <li>Repairs cannot be created for vehicles marked "For Disposal". Check vehicle disposal status before creating repairs.</li>
+                            <li>Use the "Add Post-Inspection" button on the repair detail page for faster workflow - the form will be automatically pre-filled.</li>
+                        </ul>
                     </div>
 
                     <!-- Process Flow Diagram -->
@@ -255,11 +313,18 @@
                         <div class="col-md-6">
                             <h6><span class="badge bg-primary me-2">4</span>Create Post-Inspection</h6>
                             <ol>
-                                <li>After repair work is completed</li>
-                                <li>Go to <strong>Inspections</strong> → <strong>Post-Inspections</strong></li>
-                                <li>Click <strong>"Add Post-Inspection"</strong></li>
-                                <li>Select vehicle, report type <strong>"Repair"</strong></li>
-                                <li>Link to the pre-inspection report</li>
+                                <li>After repair work is completed, go to the repair detail page</li>
+                                <li><strong>Option 1 (Recommended):</strong> Click the <strong>"Add Post-Inspection"</strong> button on the repair detail page
+                                    <ul>
+                                        <li>Form will be automatically pre-filled with vehicle, report type, and pre-inspection</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Option 2:</strong> Go to <strong>Inspections</strong> → <strong>Post-Inspections</strong> → <strong>"Add Post-Inspection"</strong>
+                                    <ul>
+                                        <li>Manually select vehicle and report type <strong>"Repair"</strong></li>
+                                        <li>Link to the pre-inspection report</li>
+                                    </ul>
+                                </li>
                                 <li>Fill out post-inspection checklist:
                                     <ul>
                                         <li>Work completion assessment</li>
@@ -318,7 +383,11 @@
                 <div class="card-body">
                     <div class="alert alert-warning" role="alert">
                         <h6><i class="bi bi-exclamation-triangle"></i> Important</h6>
-                        <p class="mb-0">PMS follows the same inspection workflow as repairs. You cannot create PMS without an approved pre-inspection report, and you cannot mark PMS as completed without an approved post-inspection report.</p>
+                        <ul class="mb-0">
+                            <li>PMS follows the same inspection workflow as repairs. You cannot create PMS without an approved pre-inspection report, and you cannot mark PMS as completed without an approved post-inspection report.</li>
+                            <li>PMS cannot be created for vehicles marked "For Disposal". Check vehicle disposal status before creating PMS.</li>
+                            <li>Use the "Add Post-Inspection" button on the PMS detail page for faster workflow - the form will be automatically pre-filled.</li>
+                        </ul>
                     </div>
 
                     <!-- PMS Process Flow Diagram -->
@@ -438,11 +507,18 @@
                         <div class="col-md-6">
                             <h6><span class="badge bg-primary me-2">4</span>Create Post-Inspection</h6>
                             <ol>
-                                <li>After PMS work is completed</li>
-                                <li>Go to <strong>Inspections</strong> → <strong>Post-Inspections</strong></li>
-                                <li>Click <strong>"Add Post-Inspection"</strong></li>
-                                <li>Select vehicle, report type <strong>"PMS"</strong></li>
-                                <li>Link to the pre-inspection report</li>
+                                <li>After PMS work is completed, go to the PMS detail page</li>
+                                <li><strong>Option 1 (Recommended):</strong> Click the <strong>"Add Post-Inspection"</strong> button on the PMS detail page
+                                    <ul>
+                                        <li>Form will be automatically pre-filled with vehicle, report type, and pre-inspection</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Option 2:</strong> Go to <strong>Inspections</strong> → <strong>Post-Inspections</strong> → <strong>"Add Post-Inspection"</strong>
+                                    <ul>
+                                        <li>Manually select vehicle and report type <strong>"PMS"</strong></li>
+                                        <li>Link to the pre-inspection report</li>
+                                    </ul>
+                                </li>
                                 <li>Fill out post-inspection checklist (same as repair)</li>
                                 <li>Click <strong>"Save"</strong></li>
                             </ol>
