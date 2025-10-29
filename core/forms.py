@@ -186,6 +186,21 @@ class RepairForm(forms.ModelForm):
         vehicle = cleaned_data.get('vehicle')
         status = cleaned_data.get('status')
         
+        # Check if vehicle is marked for disposal
+        if vehicle:
+            if vehicle.status == 'For Disposal':
+                raise forms.ValidationError(
+                    f"Cannot add repairs for vehicle {vehicle.plate_number} - Vehicle is marked FOR DISPOSAL. "
+                    "Repair costs have exceeded the disposal threshold (30% of half acquisition cost)."
+                )
+            # Also check if vehicle would be in overuse condition
+            if vehicle.is_for_disposal:
+                raise forms.ValidationError(
+                    f"Cannot add repairs for vehicle {vehicle.plate_number} - Vehicle has reached overuse condition. "
+                    f"Total repair costs ({vehicle.total_repair_costs:.2f}) exceed the disposal threshold "
+                    f"({vehicle.disposal_threshold:.2f}). The vehicle should be marked for disposal."
+                )
+        
         # Additional validation
         if pre_inspection:
             if not pre_inspection.is_approved:
@@ -375,6 +390,21 @@ class PMSForm(forms.ModelForm):
         pre_inspection = cleaned_data.get('pre_inspection')
         vehicle = cleaned_data.get('vehicle')
         status = cleaned_data.get('status')
+        
+        # Check if vehicle is marked for disposal
+        if vehicle:
+            if vehicle.status == 'For Disposal':
+                raise forms.ValidationError(
+                    f"Cannot add PMS for vehicle {vehicle.plate_number} - Vehicle is marked FOR DISPOSAL. "
+                    "Repair costs have exceeded the disposal threshold (30% of half acquisition cost)."
+                )
+            # Also check if vehicle would be in overuse condition
+            if vehicle.is_for_disposal:
+                raise forms.ValidationError(
+                    f"Cannot add PMS for vehicle {vehicle.plate_number} - Vehicle has reached overuse condition. "
+                    f"Total repair costs ({vehicle.total_repair_costs:.2f}) exceed the disposal threshold "
+                    f"({vehicle.disposal_threshold:.2f}). The vehicle should be marked for disposal."
+                )
         
         # Additional validation
         if pre_inspection:

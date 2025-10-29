@@ -154,10 +154,54 @@ def vehicle_list(request):
             Q(model__icontains=search_query)
         )
     
+    # Check and mark vehicles for disposal based on repair costs
+    for vehicle in vehicles:
+        if vehicle.acquisition_cost:  # Only check if acquisition cost is set
+            vehicle.check_and_mark_for_disposal(user=request.user)
+    
     divisions = Division.objects.all()
     
+    # Prepare vehicle data with overuse information for template
+    vehicle_data = []
+    for vehicle in vehicles:
+        is_overuse = False
+        overuse_info = None
+        disposal_percentage = None
+        
+        if vehicle.acquisition_cost:
+            threshold = vehicle.disposal_threshold
+            total_costs = vehicle.total_repair_costs
+            if threshold and threshold > 0:
+                # Calculate percentage of threshold used (can be > 100%)
+                from decimal import Decimal
+                percentage = float(total_costs / threshold * Decimal('100'))
+                disposal_percentage = percentage
+                
+                if total_costs >= threshold:
+                    is_overuse = True
+                    overuse_info = {
+                        'total_costs': total_costs,
+                        'threshold': threshold,
+                        'percentage': disposal_percentage,
+                    }
+                else:
+                    # Still show info even if not at threshold yet
+                    overuse_info = {
+                        'total_costs': total_costs,
+                        'threshold': threshold,
+                        'percentage': disposal_percentage,
+                    }
+        
+        vehicle_data.append({
+            'vehicle': vehicle,
+            'is_overuse': is_overuse,
+            'overuse_info': overuse_info,
+            'disposal_percentage': disposal_percentage,
+        })
+    
     context = {
-        'vehicles': vehicles,
+        'vehicle_data': vehicle_data,
+        'vehicles': vehicles,  # Keep for backward compatibility
         'divisions': divisions,
         'status_filter': status_filter,
         'division_filter': division_filter,

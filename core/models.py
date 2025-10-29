@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+from decimal import Decimal
 
 
 class CustomUser(AbstractUser):
@@ -177,6 +178,7 @@ class Vehicle(models.Model):
         ('Serviceable', 'Serviceable'),
         ('Under Repair', 'Under Repair'),
         ('Unserviceable', 'Unserviceable'),
+        ('For Disposal', 'For Disposal'),
     ]
     
     RFID_TYPE_CHOICES = [
@@ -263,9 +265,38 @@ class Vehicle(models.Model):
     
     @property
     def total_repair_costs(self):
-        return self.repairs.filter(status='Completed').aggregate(
-            total=models.Sum('cost')
-        )['total'] or 0
+        """Calculate total repair costs including parts and labor for all completed repairs"""
+        total = Decimal('0')
+        for repair in self.repairs.filter(status='Completed'):
+            total += repair.total_cost
+        return total
+    
+    @property
+    def disposal_threshold(self):
+        """Calculate the disposal threshold: 30% of (acquisition_cost / 2) = 15% of acquisition_cost"""
+        if not self.acquisition_cost or self.acquisition_cost <= 0:
+            return None
+        x = self.acquisition_cost / Decimal('2')
+        threshold = x * Decimal('0.30')  # 30% of x
+        return threshold
+    
+    @property
+    def is_for_disposal(self):
+        """Check if vehicle should be marked for disposal based on repair costs"""
+        threshold = self.disposal_threshold
+        if threshold is None:
+            return False
+        return self.total_repair_costs >= threshold
+    
+    def check_and_mark_for_disposal(self, user=None):
+        """Check if vehicle exceeds threshold and automatically mark for disposal if needed"""
+        if self.is_for_disposal and self.status != 'For Disposal':
+            threshold = self.disposal_threshold
+            total_costs = self.total_repair_costs
+            reason = f'Vehicle marked for disposal: Total repair costs ({total_costs:.2f}) exceed 30% of half acquisition cost (threshold: {threshold:.2f})'
+            self.update_status('For Disposal', user=user, reason=reason, auto_update=True)
+            return True
+        return False
     
     class Meta:
         ordering = ['-created_at']
@@ -353,19 +384,44 @@ class Repair(models.Model):
         # Enforce business rules
         self._validate_inspection_requirements()
         
+        # Store old status and cost to check if we need to re-calculate disposal status
+        old_status = None
+        old_cost = None
+        if self.pk:
+            try:
+                old_repair = self.__class__.objects.get(pk=self.pk)
+                old_status = old_repair.status
+                old_cost = old_repair.cost + (old_repair.labor_cost or 0)
+            except self.__class__.DoesNotExist:
+                pass
+        
         super().save(*args, **kwargs)
         
-        # Auto-update vehicle status based on repair status
+        # Check if vehicle should be marked for disposal
+        # This happens when:
+        # 1. A repair is marked as Completed
+        # 2. A completed repair's cost is updated
         if self.status == 'Completed':
+            # Refresh vehicle from DB to get latest repair costs
+            self.vehicle.refresh_from_db()
+            self.vehicle.check_and_mark_for_disposal(user=None)
+            
             # Check if there are any other ongoing repairs for this vehicle
             ongoing_repairs = self.vehicle.repairs.filter(status='Ongoing').exclude(id=self.id)
             if not ongoing_repairs.exists() and self.vehicle.status == 'Under Repair':
-                # No more ongoing repairs, set vehicle to serviceable
-                self.vehicle.update_status(
-                    'Serviceable', 
-                    reason=f'All repairs completed for vehicle {self.vehicle.plate_number}',
-                    auto_update=True
-                )
+                # No more ongoing repairs, but only set to serviceable if not marked for disposal
+                if self.vehicle.status != 'For Disposal':
+                    self.vehicle.update_status(
+                        'Serviceable', 
+                        reason=f'All repairs completed for vehicle {self.vehicle.plate_number}',
+                        auto_update=True
+                    )
+        elif old_status == 'Completed' and self.status != 'Completed':
+            # Repair was un-completed, check if vehicle should still be for disposal
+            self.vehicle.refresh_from_db()
+            # Don't automatically unmark, but check threshold
+            # Vehicle can only be unmarked manually by admin
+            pass
         
         elif self.status == 'Ongoing' and self.vehicle.status == 'Serviceable':
             # Set vehicle to under repair when repair starts
