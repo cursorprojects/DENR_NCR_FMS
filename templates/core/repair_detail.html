@@ -177,6 +177,73 @@
                             {% endif %}
                         </div>
                     </div>
+                    
+                    <!-- Inspection Reports Section -->
+                    {% if repair.pre_inspection or repair.post_inspection %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <h6><i class="bi bi-clipboard-check me-2"></i>Inspection Reports</h6>
+                            <div class="row">
+                                {% if repair.pre_inspection %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="bi bi-clipboard-check text-info"></i> Pre-Inspection Report
+                                            </h6>
+                                            <p class="card-text small">
+                                                <strong>Date:</strong> {{ repair.pre_inspection.inspection_date|date:"F d, Y" }}<br>
+                                                <strong>Inspected by:</strong> {{ repair.pre_inspection.inspected_by.get_full_name }}<br>
+                                                <strong>Overall Condition:</strong> 
+                                                <span class="badge {% if repair.pre_inspection.overall_condition == 'excellent' %}bg-success{% elif repair.pre_inspection.overall_condition == 'good' %}bg-primary{% elif repair.pre_inspection.overall_condition == 'fair' %}bg-warning{% elif repair.pre_inspection.overall_condition == 'poor' %}bg-danger{% else %}bg-dark{% endif %}">
+                                                    {{ repair.pre_inspection.overall_condition|title }}
+                                                </span><br>
+                                                {% if repair.pre_inspection.is_approved %}
+                                                    <span class="badge bg-success">Approved</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pending Approval</span>
+                                                {% endif %}
+                                            </p>
+                                            <a href="{% url 'pre_inspection_detail' repair.pre_inspection.id %}" class="btn btn-outline-info btn-sm">
+                                                <i class="bi bi-eye"></i> View Pre-Inspection
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if repair.post_inspection %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-success">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="bi bi-clipboard-check text-success"></i> Post-Inspection Report
+                                            </h6>
+                                            <p class="card-text small">
+                                                <strong>Date:</strong> {{ repair.post_inspection.inspection_date|date:"F d, Y" }}<br>
+                                                <strong>Inspected by:</strong> {{ repair.post_inspection.inspected_by.get_full_name }}<br>
+                                                <strong>Overall Condition:</strong> 
+                                                <span class="badge {% if repair.post_inspection.overall_condition == 'excellent' %}bg-success{% elif repair.post_inspection.overall_condition == 'good' %}bg-primary{% elif repair.post_inspection.overall_condition == 'fair' %}bg-warning{% elif repair.post_inspection.overall_condition == 'poor' %}bg-danger{% else %}bg-dark{% endif %}">
+                                                    {{ repair.post_inspection.overall_condition|title }}
+                                                </span><br>
+                                                {% if repair.post_inspection.is_approved %}
+                                                    <span class="badge bg-success">Approved</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pending Approval</span>
+                                                {% endif %}
+                                            </p>
+                                            <a href="{% url 'post_inspection_detail' repair.post_inspection.id %}" class="btn btn-outline-success btn-sm">
+                                                <i class="bi bi-eye"></i> View Post-Inspection
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 
                 <div class="col-md-4">

@@ -70,6 +70,9 @@ urlpatterns = [
     path('notifications/<int:notification_id>/mark-read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
     
+    # System Manual
+    path('manual/', views.system_manual, name='system_manual'),
+    
     # Inspection Report URLs
     # Pre-Inspection Reports
     path('pre-inspections/', views.pre_inspection_list, name='pre_inspection_list'),

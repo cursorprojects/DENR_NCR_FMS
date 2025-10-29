@@ -116,6 +116,40 @@
         </div>
     </div>
 
+    <!-- Help & Resources -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3"><i class="bi bi-question-circle"></i> Help & Resources</h4>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'system_manual' %}'">
+                <div class="card-body text-center">
+                    <i class="bi bi-book text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-2">System Manual</h5>
+                    <p class="card-text text-muted">Complete process flow and user guide</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'reports' %}'">
+                <div class="card-body text-center">
+                    <i class="bi bi-graph-up text-success" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-2">Reports</h5>
+                    <p class="card-text text-muted">View analytics and reports</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 clickable-card" onclick="window.location.href='{% url 'notifications' %}'">
+                <div class="card-body text-center">
+                    <i class="bi bi-bell text-warning" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-2">Notifications</h5>
+                    <p class="card-text text-muted">View all system notifications</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Management Sections -->
     <div class="row mb-4">
         <div class="col-12">

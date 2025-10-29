@@ -1475,6 +1475,12 @@ def post_inspection_approve(request, pk):
 
 
 @login_required
+def system_manual(request):
+    """Display system process flow and manual"""
+    return render(request, 'core/system_manual.html')
+
+
+@login_required
 def repair_complete(request, pk):
     """Complete a repair after post-inspection is approved"""
     repair = get_object_or_404(Repair, pk=pk)

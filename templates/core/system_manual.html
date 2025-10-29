@@ -1,0 +1,848 @@
+{% extends 'base.html' %}
+
+{% block title %}System Process Flow & Manual{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-book me-2"></i>System Process Flow & Manual</h2>
+                <div>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Table of Contents -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-list-ul"></i> Table of Contents</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><a href="#overview" class="text-decoration-none">1. System Overview</a></li>
+                                <li><a href="#vehicle-management" class="text-decoration-none">2. Vehicle Management</a></li>
+                                <li><a href="#repair-process" class="text-decoration-none">3. Repair Process</a></li>
+                                <li><a href="#pms-process" class="text-decoration-none">4. PMS Process</a></li>
+                                <li><a href="#inspection-workflow" class="text-decoration-none">5. Inspection Workflow</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><a href="#notifications" class="text-decoration-none">6. Notifications</a></li>
+                                <li><a href="#reports" class="text-decoration-none">7. Reports & Analytics</a></li>
+                                <li><a href="#user-management" class="text-decoration-none">8. User Management</a></li>
+                                <li><a href="#troubleshooting" class="text-decoration-none">9. Troubleshooting</a></li>
+                                <li><a href="#best-practices" class="text-decoration-none">10. Best Practices</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Overview -->
+            <div class="card mb-4" id="overview">
+                <div class="card-header">
+                    <h4><i class="bi bi-info-circle me-2"></i>1. System Overview</h4>
+                </div>
+                <div class="card-body">
+                    <p>The Fleet Management System is designed to manage vehicle maintenance, repairs, and inspections with a comprehensive workflow that ensures quality control and proper documentation.</p>
+                    
+                    <h6>Key Features:</h6>
+                    <ul>
+                        <li><strong>Vehicle Management:</strong> Track vehicle information, status, and history</li>
+                        <li><strong>Repair Management:</strong> Complete repair workflow with pre/post inspections</li>
+                        <li><strong>PMS (Preventive Maintenance Service):</strong> Scheduled maintenance with inspection requirements</li>
+                        <li><strong>Inspection Reports:</strong> Pre and post-inspection documentation</li>
+                        <li><strong>Notifications:</strong> Real-time alerts and updates</li>
+                        <li><strong>Reports:</strong> Analytics and reporting capabilities</li>
+                    </ul>
+
+                    <div class="alert alert-info" role="alert">
+                        <h6><i class="bi bi-lightbulb"></i> Important Note</h6>
+                        <p class="mb-0">All repair and PMS processes require proper inspection workflow. You cannot complete repairs or PMS without approved pre and post-inspection reports.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vehicle Management -->
+            <div class="card mb-4" id="vehicle-management">
+                <div class="card-header">
+                    <h4><i class="bi bi-car-front me-2"></i>2. Vehicle Management</h4>
+                </div>
+                <div class="card-body">
+                    <h6>Adding a New Vehicle:</h6>
+                    <ol>
+                        <li>Navigate to <strong>Vehicles</strong> in the main menu</li>
+                        <li>Click <strong>"Add Vehicle"</strong> button</li>
+                        <li>Fill in all required information:
+                            <ul>
+                                <li>Plate Number (unique identifier)</li>
+                                <li>Vehicle Type, Make, Model, Year</li>
+                                <li>Engine and Chassis Numbers</li>
+                                <li>Acquisition details and cost</li>
+                                <li>Current mileage and status</li>
+                            </ul>
+                        </li>
+                        <li>Click <strong>"Save"</strong> to create the vehicle</li>
+                    </ol>
+
+                    <h6>Viewing Vehicle Details:</h6>
+                    <ol>
+                        <li>Go to <strong>Vehicles</strong> list</li>
+                        <li>Click on any vehicle plate number</li>
+                        <li>View comprehensive vehicle information including:
+                            <ul>
+                                <li>Basic vehicle details</li>
+                                <li>Repair history</li>
+                                <li>PMS history</li>
+                                <li>Inspection reports</li>
+                                <li>Status changes</li>
+                            </ul>
+                        </li>
+                    </ol>
+
+                    <h6>Changing Vehicle Status:</h6>
+                    <ol>
+                        <li>From vehicle detail page, click <strong>"Change Status"</strong> button</li>
+                        <li>Select new status and provide reason</li>
+                        <li>Click <strong>"Update Status"</strong></li>
+                        <li>Status change will be logged with timestamp and user</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Repair Process -->
+            <div class="card mb-4" id="repair-process">
+                <div class="card-header">
+                    <h4><i class="bi bi-wrench me-2"></i>3. Repair Process</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning" role="alert">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Important</h6>
+                        <p class="mb-0">Repairs require a complete inspection workflow. You cannot create a repair without an approved pre-inspection report, and you cannot mark a repair as completed without an approved post-inspection report.</p>
+                    </div>
+
+                    <!-- Process Flow Diagram -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6><i class="bi bi-diagram-3"></i> Repair Process Flow</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="process-flow">
+                                <div class="row text-center">
+                                    <div class="col-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">1</div>
+                                            <div class="step-title">Create Pre-Inspection</div>
+                                            <div class="step-desc">Fill inspection checklist</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-arrow-right text-primary fs-4"></i>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">2</div>
+                                            <div class="step-title">Approve Pre-Inspection</div>
+                                            <div class="step-desc">Supervisor approval</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-arrow-right text-primary fs-4"></i>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">3</div>
+                                            <div class="step-title">Create Repair</div>
+                                            <div class="step-desc">Link to pre-inspection</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-arrow-right text-primary fs-4"></i>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">4</div>
+                                            <div class="step-title">Create Post-Inspection</div>
+                                            <div class="step-desc">After repair completion</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row text-center mt-3">
+                                    <div class="col-md-2 offset-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">5</div>
+                                            <div class="step-title">Approve Post-Inspection</div>
+                                            <div class="step-desc">Supervisor approval</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-arrow-right text-primary fs-4"></i>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="process-step success">
+                                            <div class="step-number">6</div>
+                                            <div class="step-title">Complete Repair</div>
+                                            <div class="step-desc">Final completion</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6>Step-by-Step Repair Process:</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">1</span>Create Pre-Inspection Report</h6>
+                            <ol>
+                                <li>Go to <strong>Inspections</strong> → <strong>Pre-Inspections</strong></li>
+                                <li>Click <strong>"Add Pre-Inspection"</strong></li>
+                                <li>Select vehicle and report type <strong>"Repair"</strong></li>
+                                <li>Fill out comprehensive inspection checklist:
+                                    <ul>
+                                        <li>Engine, transmission, brakes condition</li>
+                                        <li>Suspension, electrical, body condition</li>
+                                        <li>Tires and lights condition</li>
+                                        <li>Current mileage and fuel level</li>
+                                        <li>Issues found and safety concerns</li>
+                                        <li>Recommended actions</li>
+                                    </ul>
+                                </li>
+                                <li>Click <strong>"Save"</strong></li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">2</span>Approve Pre-Inspection</h6>
+                            <ol>
+                                <li>Go to the created pre-inspection report</li>
+                                <li>Click <strong>"Approve"</strong> button</li>
+                                <li>Add approval notes (optional)</li>
+                                <li>Click <strong>"Approve Report"</strong></li>
+                                <li>Report status changes to <strong>"Approved"</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">3</span>Create Repair Record</h6>
+                            <ol>
+                                <li>Go to <strong>Repairs</strong> → <strong>"Add Repair Record"</strong></li>
+                                <li>Select vehicle and approved pre-inspection report</li>
+                                <li>Fill in repair details:
+                                    <ul>
+                                        <li>Date of repair</li>
+                                        <li>Description of work</li>
+                                        <li>Cost and labor cost</li>
+                                        <li>Repair shop and technician</li>
+                                        <li>Status: <strong>"Ongoing"</strong></li>
+                                    </ul>
+                                </li>
+                                <li>Add parts if needed</li>
+                                <li>Click <strong>"Save"</strong></li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">4</span>Create Post-Inspection</h6>
+                            <ol>
+                                <li>After repair work is completed</li>
+                                <li>Go to <strong>Inspections</strong> → <strong>Post-Inspections</strong></li>
+                                <li>Click <strong>"Add Post-Inspection"</strong></li>
+                                <li>Select vehicle, report type <strong>"Repair"</strong></li>
+                                <li>Link to the pre-inspection report</li>
+                                <li>Fill out post-inspection checklist:
+                                    <ul>
+                                        <li>Work completion assessment</li>
+                                        <li>Quality, timeliness, cleanliness ratings</li>
+                                        <li>Post-work condition assessment</li>
+                                        <li>Test drive results</li>
+                                        <li>Remaining issues and recommendations</li>
+                                    </ul>
+                                </li>
+                                <li>Click <strong>"Save"</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">5</span>Approve Post-Inspection</h6>
+                            <ol>
+                                <li>Go to the created post-inspection report</li>
+                                <li>Click <strong>"Approve"</strong> button</li>
+                                <li>Add approval notes</li>
+                                <li>Click <strong>"Approve Report"</strong></li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-success me-2">6</span>Complete Repair</h6>
+                            <ol>
+                                <li>Go to repair detail page</li>
+                                <li>Click <strong>"Complete Repair"</strong> button (appears only after post-inspection approval)</li>
+                                <li>Review completion details</li>
+                                <li>Click <strong>"Complete Repair"</strong></li>
+                                <li>Repair status changes to <strong>"Completed"</strong></li>
+                                <li>Vehicle status automatically updates to <strong>"Serviceable"</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3" role="alert">
+                        <h6><i class="bi bi-info-circle"></i> What Happens When You Complete a Repair?</h6>
+                        <ul class="mb-0">
+                            <li>Repair status changes to "Completed"</li>
+                            <li>Vehicle status updates to "Serviceable" (if no other ongoing repairs)</li>
+                            <li>Activity log entry is created</li>
+                            <li>Notifications are sent to relevant users</li>
+                            <li>Status cannot be changed back from "Completed"</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PMS Process -->
+            <div class="card mb-4" id="pms-process">
+                <div class="card-header">
+                    <h4><i class="bi bi-gear me-2"></i>4. PMS (Preventive Maintenance Service) Process</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning" role="alert">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Important</h6>
+                        <p class="mb-0">PMS follows the same inspection workflow as repairs. You cannot create PMS without an approved pre-inspection report, and you cannot mark PMS as completed without an approved post-inspection report.</p>
+                    </div>
+
+                    <!-- PMS Process Flow Diagram -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6><i class="bi bi-diagram-3"></i> PMS Process Flow</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="process-flow">
+                                <div class="row text-center">
+                                    <div class="col-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">1</div>
+                                            <div class="step-title">Create Pre-Inspection</div>
+                                            <div class="step-desc">Fill inspection checklist</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-arrow-right text-primary fs-4"></i>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">2</div>
+                                            <div class="step-title">Approve Pre-Inspection</div>
+                                            <div class="step-desc">Supervisor approval</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-arrow-right text-primary fs-4"></i>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">3</div>
+                                            <div class="step-title">Create PMS</div>
+                                            <div class="step-desc">Link to pre-inspection</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-arrow-right text-primary fs-4"></i>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">4</div>
+                                            <div class="step-title">Create Post-Inspection</div>
+                                            <div class="step-desc">After PMS completion</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row text-center mt-3">
+                                    <div class="col-md-2 offset-md-2">
+                                        <div class="process-step">
+                                            <div class="step-number">5</div>
+                                            <div class="step-title">Approve Post-Inspection</div>
+                                            <div class="step-desc">Supervisor approval</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-arrow-right text-primary fs-4"></i>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="process-step success">
+                                            <div class="step-number">6</div>
+                                            <div class="step-title">Complete PMS</div>
+                                            <div class="step-desc">Final completion</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6>Step-by-Step PMS Process:</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">1</span>Create Pre-Inspection Report</h6>
+                            <ol>
+                                <li>Go to <strong>Inspections</strong> → <strong>Pre-Inspections</strong></li>
+                                <li>Click <strong>"Add Pre-Inspection"</strong></li>
+                                <li>Select vehicle and report type <strong>"PMS"</strong></li>
+                                <li>Fill out comprehensive inspection checklist (same as repair)</li>
+                                <li>Click <strong>"Save"</strong></li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">2</span>Approve Pre-Inspection</h6>
+                            <ol>
+                                <li>Go to the created pre-inspection report</li>
+                                <li>Click <strong>"Approve"</strong> button</li>
+                                <li>Add approval notes</li>
+                                <li>Click <strong>"Approve Report"</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">3</span>Create PMS Record</h6>
+                            <ol>
+                                <li>Go to <strong>PMS</strong> → <strong>"Add PMS Record"</strong></li>
+                                <li>Select vehicle and approved pre-inspection report</li>
+                                <li>Fill in PMS details:
+                                    <ul>
+                                        <li>Service type: <strong>"General Inspection"</strong></li>
+                                        <li>Scheduled and completed dates</li>
+                                        <li>Mileage at service</li>
+                                        <li>Next service mileage</li>
+                                        <li>Cost and service provider</li>
+                                        <li>Technician and description</li>
+                                        <li>Status: <strong>"In Progress"</strong></li>
+                                    </ul>
+                                </li>
+                                <li>Add parts if needed</li>
+                                <li>Click <strong>"Save"</strong></li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">4</span>Create Post-Inspection</h6>
+                            <ol>
+                                <li>After PMS work is completed</li>
+                                <li>Go to <strong>Inspections</strong> → <strong>Post-Inspections</strong></li>
+                                <li>Click <strong>"Add Post-Inspection"</strong></li>
+                                <li>Select vehicle, report type <strong>"PMS"</strong></li>
+                                <li>Link to the pre-inspection report</li>
+                                <li>Fill out post-inspection checklist (same as repair)</li>
+                                <li>Click <strong>"Save"</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-primary me-2">5</span>Approve Post-Inspection</h6>
+                            <ol>
+                                <li>Go to the created post-inspection report</li>
+                                <li>Click <strong>"Approve"</strong> button</li>
+                                <li>Add approval notes</li>
+                                <li>Click <strong>"Approve Report"</strong></li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><span class="badge bg-success me-2">6</span>Complete PMS</h6>
+                            <ol>
+                                <li>Go to PMS detail page</li>
+                                <li>Click <strong>"Complete PMS"</strong> button (appears only after post-inspection approval)</li>
+                                <li>Review completion details</li>
+                                <li>Click <strong>"Complete PMS"</strong></li>
+                                <li>PMS status changes to <strong>"Completed"</strong></li>
+                                <li>Vehicle status automatically updates to <strong>"Serviceable"</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3" role="alert">
+                        <h6><i class="bi bi-info-circle"></i> PMS vs Repair Differences</h6>
+                        <ul class="mb-0">
+                            <li><strong>PMS:</strong> Scheduled maintenance, preventive care</li>
+                            <li><strong>Repair:</strong> Fixing specific issues or damage</li>
+                            <li><strong>Both:</strong> Require same inspection workflow</li>
+                            <li><strong>Both:</strong> Cannot be completed without proper inspections</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inspection Workflow -->
+            <div class="card mb-4" id="inspection-workflow">
+                <div class="card-header">
+                    <h4><i class="bi bi-clipboard-check me-2"></i>5. Inspection Workflow</h4>
+                </div>
+                <div class="card-body">
+                    <h6>Pre-Inspection Report Details:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Required Information:</h6>
+                            <ul>
+                                <li><strong>Vehicle Selection:</strong> Choose the vehicle to inspect</li>
+                                <li><strong>Report Type:</strong> Repair or PMS</li>
+                                <li><strong>Inspected By:</strong> Person conducting inspection</li>
+                                <li><strong>Condition Assessment:</strong> All vehicle systems</li>
+                                <li><strong>Mileage:</strong> Current odometer reading</li>
+                                <li><strong>Fuel Level:</strong> Current fuel status</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Condition Ratings:</h6>
+                            <ul>
+                                <li><strong>Excellent:</strong> Perfect condition</li>
+                                <li><strong>Good:</strong> Minor wear, fully functional</li>
+                                <li><strong>Fair:</strong> Some wear, needs attention</li>
+                                <li><strong>Poor:</strong> Significant issues, needs repair</li>
+                                <li><strong>Critical:</strong> Safety hazard, immediate attention</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h6>Post-Inspection Report Details:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Work Assessment:</h6>
+                            <ul>
+                                <li><strong>Work Completed Satisfactorily:</strong> Yes/No</li>
+                                <li><strong>Quality of Work:</strong> Excellent to Unsatisfactory</li>
+                                <li><strong>Timeliness:</strong> How quickly work was done</li>
+                                <li><strong>Cleanliness:</strong> Work area condition</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Post-Work Assessment:</h6>
+                            <ul>
+                                <li><strong>Condition Check:</strong> All vehicle systems re-evaluated</li>
+                                <li><strong>Test Drive:</strong> Distance and notes</li>
+                                <li><strong>Remaining Issues:</strong> Any unresolved problems</li>
+                                <li><strong>Future Recommendations:</strong> Maintenance advice</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-success mt-3" role="alert">
+                        <h6><i class="bi bi-check-circle"></i> Approval Process</h6>
+                        <p class="mb-0">Both pre and post-inspection reports must be approved by a supervisor before they can be used in repair or PMS processes. Only approved reports will appear in the dropdown selections.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="card mb-4" id="notifications">
+                <div class="card-header">
+                    <h4><i class="bi bi-bell me-2"></i>6. Notifications</h4>
+                </div>
+                <div class="card-body">
+                    <h6>Notification Types:</h6>
+                    <ul>
+                        <li><strong>Vehicle Status Changes:</strong> When vehicle status is updated</li>
+                        <li><strong>Repair/PMS Updates:</strong> When repairs or PMS are created or completed</li>
+                        <li><strong>Inspection Reports:</strong> When reports are created or need approval</li>
+                        <li><strong>System Alerts:</strong> Important system notifications</li>
+                    </ul>
+
+                    <h6>Managing Notifications:</h6>
+                    <ol>
+                        <li>Click the <strong>bell icon</strong> in the header</li>
+                        <li>View unread notifications</li>
+                        <li>Click <strong>"Mark as Read"</strong> for individual notifications</li>
+                        <li>Click <strong>"Mark All as Read"</strong> to clear all notifications</li>
+                        <li>Click <strong>"View All Notifications"</strong> for complete list</li>
+                    </ol>
+
+                    <div class="alert alert-info" role="alert">
+                        <h6><i class="bi bi-info-circle"></i> Notification Badge</h6>
+                        <p class="mb-0">The red badge on the bell icon shows the number of unread notifications. This updates automatically as you read notifications.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports -->
+            <div class="card mb-4" id="reports">
+                <div class="card-header">
+                    <h4><i class="bi bi-graph-up me-2"></i>7. Reports & Analytics</h4>
+                </div>
+                <div class="card-body">
+                    <h6>Available Reports:</h6>
+                    <ul>
+                        <li><strong>Vehicle Reports:</strong> Vehicle status, mileage, and history</li>
+                        <li><strong>Repair Reports:</strong> Repair costs, frequency, and trends</li>
+                        <li><strong>PMS Reports:</strong> Maintenance schedules and compliance</li>
+                        <li><strong>Inspection Reports:</strong> Inspection findings and trends</li>
+                        <li><strong>Cost Analysis:</strong> Maintenance and repair costs</li>
+                    </ul>
+
+                    <h6>Accessing Reports:</h6>
+                    <ol>
+                        <li>Go to <strong>Reports</strong> in the main menu</li>
+                        <li>Select the type of report you need</li>
+                        <li>Choose date ranges and filters</li>
+                        <li>Click <strong>"Generate Report"</strong></li>
+                        <li>Export or print as needed</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- User Management -->
+            <div class="card mb-4" id="user-management">
+                <div class="card-header">
+                    <h4><i class="bi bi-people me-2"></i>8. User Management</h4>
+                </div>
+                <div class="card-body">
+                    <h6>User Roles:</h6>
+                    <ul>
+                        <li><strong>Super Admin:</strong> Full system access, can approve inspections</li>
+                        <li><strong>Admin:</strong> Most system functions, can approve inspections</li>
+                        <li><strong>User:</strong> Basic functions, cannot approve inspections</li>
+                    </ul>
+
+                    <h6>Managing Users (Admin Only):</h6>
+                    <ol>
+                        <li>Go to <strong>Admin Dashboard</strong></li>
+                        <li>Click <strong>"Users"</strong></li>
+                        <li>Click <strong>"Add User"</strong> to create new users</li>
+                        <li>Edit existing users by clicking the edit button</li>
+                        <li>Set appropriate roles and permissions</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="card mb-4" id="troubleshooting">
+                <div class="card-header">
+                    <h4><i class="bi bi-tools me-2"></i>9. Troubleshooting</h4>
+                </div>
+                <div class="card-body">
+                    <h6>Common Issues and Solutions:</h6>
+                    
+                    <div class="accordion" id="troubleshootingAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                    Cannot create repair/PMS without pre-inspection
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <strong>Solution:</strong> You must first create and approve a pre-inspection report before creating a repair or PMS record. Go to Inspections → Pre-Inspections → Add Pre-Inspection.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingTwo">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                    Cannot mark repair/PMS as completed
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <strong>Solution:</strong> You must create and approve a post-inspection report first. Use the "Complete Repair" or "Complete PMS" button on the detail page, not the edit form.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingThree">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                    Pre-inspection not showing in dropdown
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <strong>Solution:</strong> Only approved pre-inspection reports appear in dropdowns. Make sure the pre-inspection report is approved by going to the report detail page and clicking "Approve".
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingFour">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour">
+                                    Cannot change vehicle status
+                                </button>
+                            </h2>
+                            <div id="headingFour" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <strong>Solution:</strong> Use the "Change Status" button on the vehicle detail page, not the edit form. Provide a reason for the status change.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Best Practices -->
+            <div class="card mb-4" id="best-practices">
+                <div class="card-header">
+                    <h4><i class="bi bi-star me-2"></i>10. Best Practices</h4>
+                </div>
+                <div class="card-body">
+                    <h6>Workflow Best Practices:</h6>
+                    <ul>
+                        <li><strong>Always create pre-inspection first:</strong> Before any repair or PMS work</li>
+                        <li><strong>Be thorough in inspections:</strong> Detailed inspections prevent future issues</li>
+                        <li><strong>Approve inspections promptly:</strong> Don't delay the workflow</li>
+                        <li><strong>Use proper status changes:</strong> Follow the correct process</li>
+                        <li><strong>Document everything:</strong> Add detailed notes and descriptions</li>
+                    </ul>
+
+                    <h6>Data Entry Best Practices:</h6>
+                    <ul>
+                        <li><strong>Use consistent naming:</strong> Follow naming conventions</li>
+                        <li><strong>Enter accurate costs:</strong> Include all parts and labor</li>
+                        <li><strong>Update mileage regularly:</strong> Keep vehicle records current</li>
+                        <li><strong>Add detailed descriptions:</strong> Helpful for future reference</li>
+                        <li><strong>Upload photos when possible:</strong> Visual documentation is valuable</li>
+                    </ul>
+
+                    <h6>System Maintenance:</h6>
+                    <ul>
+                        <li><strong>Regular backups:</strong> Ensure data is backed up regularly</li>
+                        <li><strong>User training:</strong> Train users on proper workflows</li>
+                        <li><strong>Monitor notifications:</strong> Respond to alerts promptly</li>
+                        <li><strong>Review reports:</strong> Use analytics to improve processes</li>
+                        <li><strong>Keep system updated:</strong> Apply updates and patches</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Quick Reference -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4><i class="bi bi-lightning me-2"></i>Quick Reference</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Common URLs:</h6>
+                            <ul class="list-unstyled">
+                                <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                <li><a href="{% url 'vehicle_list' %}">Vehicles</a></li>
+                                <li><a href="{% url 'repair_list' %}">Repairs</a></li>
+                                <li><a href="{% url 'pms_list' %}">PMS</a></li>
+                                <li><a href="{% url 'pre_inspection_list' %}">Pre-Inspections</a></li>
+                                <li><a href="{% url 'post_inspection_list' %}">Post-Inspections</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Key Workflows:</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Repair:</strong> Pre-Inspection → Approve → Repair → Post-Inspection → Approve → Complete</li>
+                                <li><strong>PMS:</strong> Pre-Inspection → Approve → PMS → Post-Inspection → Approve → Complete</li>
+                                <li><strong>Vehicle Status:</strong> Use "Change Status" button, not edit form</li>
+                                <li><strong>Inspections:</strong> Must be approved before use</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.accordion-button:not(.collapsed) {
+    background-color: #e7f3ff;
+    border-color: #b3d9ff;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+h6 {
+    color: #495057;
+    font-weight: 600;
+}
+
+.alert {
+    border-left: 4px solid;
+}
+
+.alert-info {
+    border-left-color: #17a2b8;
+}
+
+.alert-warning {
+    border-left-color: #ffc107;
+}
+
+.alert-success {
+    border-left-color: #28a745;
+}
+
+/* Process Flow Styles */
+.process-step {
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 5px;
+    transition: all 0.3s ease;
+}
+
+.process-step:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+    transform: translateY(-2px);
+}
+
+.process-step.success {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+.step-number {
+    background: #007bff;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    margin: 0 auto 10px;
+}
+
+.process-step.success .step-number {
+    background: #28a745;
+}
+
+.step-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 5px;
+}
+
+.step-desc {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+
+.process-flow {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 20px;
+}
+</style>
+{% endblock %}

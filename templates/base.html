@@ -190,11 +190,18 @@
                             <li><a class="dropdown-item" href="{% url 'pre_inspection_create' %}">
                                 <i class="bi bi-plus-lg"></i> Add Pre-Inspection
                             </a></li>
-                            <li><a class="dropdown-item" href="{% url 'post_inspection_create' %}">
-                                <i class="bi bi-plus-lg"></i> Add Post-Inspection
-                            </a></li>
-                        </ul>
-                    </li>
+                    <li><a class="dropdown-item" href="{% url 'post_inspection_create' %}">
+                        <i class="bi bi-plus-lg"></i> Add Post-Inspection
+                    </a></li>
+                </ul>
+            </li>
+            
+            <!-- System Manual -->
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'system_manual' %}">
+                    <i class="bi bi-book"></i> System Manual
+                </a>
+            </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'operational_status' %}">
                             <i class="bi bi-activity"></i> Status

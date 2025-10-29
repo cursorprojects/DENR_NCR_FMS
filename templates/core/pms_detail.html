@@ -245,6 +245,73 @@
                     </div>
                     {% endif %}
 
+                    <!-- Inspection Reports Section -->
+                    {% if pms.pre_inspection or pms.post_inspection %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <h5><i class="bi bi-clipboard-check"></i> Inspection Reports</h5>
+                            <div class="row">
+                                {% if pms.pre_inspection %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="bi bi-clipboard-check text-info"></i> Pre-Inspection Report
+                                            </h6>
+                                            <p class="card-text small">
+                                                <strong>Date:</strong> {{ pms.pre_inspection.inspection_date|date:"F d, Y" }}<br>
+                                                <strong>Inspected by:</strong> {{ pms.pre_inspection.inspected_by.get_full_name }}<br>
+                                                <strong>Overall Condition:</strong> 
+                                                <span class="badge {% if pms.pre_inspection.overall_condition == 'excellent' %}bg-success{% elif pms.pre_inspection.overall_condition == 'good' %}bg-primary{% elif pms.pre_inspection.overall_condition == 'fair' %}bg-warning{% elif pms.pre_inspection.overall_condition == 'poor' %}bg-danger{% else %}bg-dark{% endif %}">
+                                                    {{ pms.pre_inspection.overall_condition|title }}
+                                                </span><br>
+                                                {% if pms.pre_inspection.is_approved %}
+                                                    <span class="badge bg-success">Approved</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pending Approval</span>
+                                                {% endif %}
+                                            </p>
+                                            <a href="{% url 'pre_inspection_detail' pms.pre_inspection.id %}" class="btn btn-outline-info btn-sm">
+                                                <i class="bi bi-eye"></i> View Pre-Inspection
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if pms.post_inspection %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-success">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="bi bi-clipboard-check text-success"></i> Post-Inspection Report
+                                            </h6>
+                                            <p class="card-text small">
+                                                <strong>Date:</strong> {{ pms.post_inspection.inspection_date|date:"F d, Y" }}<br>
+                                                <strong>Inspected by:</strong> {{ pms.post_inspection.inspected_by.get_full_name }}<br>
+                                                <strong>Overall Condition:</strong> 
+                                                <span class="badge {% if pms.post_inspection.overall_condition == 'excellent' %}bg-success{% elif pms.post_inspection.overall_condition == 'good' %}bg-primary{% elif pms.post_inspection.overall_condition == 'fair' %}bg-warning{% elif pms.post_inspection.overall_condition == 'poor' %}bg-danger{% else %}bg-dark{% endif %}">
+                                                    {{ pms.post_inspection.overall_condition|title }}
+                                                </span><br>
+                                                {% if pms.post_inspection.is_approved %}
+                                                    <span class="badge bg-success">Approved</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pending Approval</span>
+                                                {% endif %}
+                                            </p>
+                                            <a href="{% url 'post_inspection_detail' pms.post_inspection.id %}" class="btn btn-outline-success btn-sm">
+                                                <i class="bi bi-eye"></i> View Post-Inspection
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Actions -->
                     <div class="row mt-4">
                         <div class="col-12">
