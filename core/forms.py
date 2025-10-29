@@ -223,7 +223,7 @@ class PMSForm(forms.ModelForm):
             'completed_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'mileage_at_service': forms.NumberInput(attrs={'class': 'form-control'}),
             'next_service_mileage': forms.NumberInput(attrs={'class': 'form-control'}),
-            'cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cost': forms.TextInput(attrs={'class': 'form-control decimal-input'}),
             'provider': forms.HiddenInput(),  # Will be populated by repair_shop
             'technician': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),

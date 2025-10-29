@@ -437,11 +437,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen for changes in labor cost
     const laborCostInput = document.querySelector('input[name="labor_cost"]');
     if (laborCostInput) {
+        // Add formatting while typing (with commas)
+        formatWhileTyping(laborCostInput);
+        
         laborCostInput.addEventListener('input', function() {
             calculateTotalCost();
         });
         
-        // Format labor cost on blur
+        // Format labor cost on blur (with commas for display)
         laborCostInput.addEventListener('blur', function() {
             formatInput(this);
             calculateTotalCost();
@@ -455,6 +458,70 @@ document.addEventListener('DOMContentLoaded', function() {
     const initialPartsCost = parseFloat(document.getElementById('id_cost').value) || 0;
     if (initialPartsCost > 0) {
         document.getElementById('cost_display').value = formatNumber(initialPartsCost.toFixed(2));
+    }
+    
+    // Format existing labor cost value on page load (for edit mode)
+    if (laborCostInput && laborCostInput.value) {
+        const existingValue = parseFloat(laborCostInput.value);
+        if (!isNaN(existingValue) && existingValue > 0) {
+            laborCostInput.value = existingValue.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+    }
+    
+    // Format existing cost values in parts table on page load (for edit mode)
+    document.querySelectorAll('#parts-table input[name$="-cost"]').forEach(function(input) {
+        if (input.value && input.value.trim() !== '') {
+            const existingValue = parseFloat(input.value.replace(/,/g, ''));
+            if (!isNaN(existingValue) && existingValue > 0) {
+                input.value = existingValue.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+        }
+    });
+    
+    // Clean cost fields before form submission (remove commas)
+    // This ensures formatted numbers with commas are converted to plain numbers for Django validation
+    const repairForm = document.getElementById('repair-form');
+    if (repairForm) {
+        repairForm.addEventListener('submit', function(e) {
+            // Remove commas from all cost inputs in parts table
+            document.querySelectorAll('#parts-table input[name$="-cost"]').forEach(function(input) {
+                if (input.value && input.value.trim() !== '') {
+                    // Remove all commas and any other non-numeric characters except decimal point
+                    let cleanValue = input.value.replace(/,/g, '').trim();
+                    
+                    // Ensure it's a valid number format (e.g., "1000.50" or "1000")
+                    if (cleanValue && !isNaN(parseFloat(cleanValue))) {
+                        // Parse and format to ensure proper decimal places
+                        const numValue = parseFloat(cleanValue);
+                        input.value = numValue.toFixed(2); // Save with 2 decimal places, no commas
+                    } else {
+                        // Invalid value, clear it
+                        input.value = '';
+                    }
+                }
+            });
+            
+            // Also remove commas from labor cost field before submission
+            const laborCostInput = document.querySelector('input[name="labor_cost"]');
+            if (laborCostInput && laborCostInput.value && laborCostInput.value.trim() !== '') {
+                let cleanValue = laborCostInput.value.replace(/,/g, '').trim();
+                if (cleanValue && !isNaN(parseFloat(cleanValue))) {
+                    const numValue = parseFloat(cleanValue);
+                    laborCostInput.value = numValue.toFixed(2); // Save with 2 decimal places, no commas
+                } else {
+                    laborCostInput.value = '';
+                }
+            }
+            
+            // Note: The commas will be automatically re-added on blur (formatInput function)
+            // when the form is shown again, but for submission we need plain numbers
+        });
     }
 });
 

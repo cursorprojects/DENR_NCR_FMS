@@ -11,22 +11,16 @@ class Migration(migrations.Migration):
 
     operations = [
         # Use raw SQL to fix the database schema
+        # Note: part_additional_info, part_quantity, part_unit, and disposal_type 
+        # are already added by migration 0013, so we only need to drop old columns
         migrations.RunSQL(
-            # Forward SQL
+            # Forward SQL - only drop old columns that might exist
             [
                 "ALTER TABLE core_repair DROP COLUMN IF EXISTS additional_parts;",
                 "ALTER TABLE core_repair DROP COLUMN IF EXISTS labor_cost;",
-                "ALTER TABLE core_repair ADD COLUMN part_additional_info TEXT;",
-                "ALTER TABLE core_repair ADD COLUMN part_quantity DECIMAL(10,2) NULL;",
-                "ALTER TABLE core_repair ADD COLUMN part_unit VARCHAR(50) DEFAULT '';",
-                "ALTER TABLE core_repair ADD COLUMN disposal_type VARCHAR(20) DEFAULT 'normal';",
             ],
             # Reverse SQL
             [
-                "ALTER TABLE core_repair DROP COLUMN IF EXISTS disposal_type;",
-                "ALTER TABLE core_repair DROP COLUMN IF EXISTS part_unit;",
-                "ALTER TABLE core_repair DROP COLUMN IF EXISTS part_quantity;",
-                "ALTER TABLE core_repair DROP COLUMN IF EXISTS part_additional_info;",
                 "ALTER TABLE core_repair ADD COLUMN additional_parts TEXT;",
                 "ALTER TABLE core_repair ADD COLUMN labor_cost DECIMAL(10,2);",
             ]

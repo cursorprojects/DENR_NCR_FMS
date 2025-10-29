@@ -101,7 +101,10 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Service Cost</label>
-                                {{ form.cost }}
+                                <div class="input-group">
+                                    <span class="input-group-text">₱</span>
+                                    {{ form.cost }}
+                                </div>
                                 {% if form.cost.errors %}
                                     <div class="text-danger">{{ form.cost.errors }}</div>
                                 {% endif %}
@@ -298,16 +301,102 @@ $(document).ready(function() {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Formatting functions for cost fields (must be defined first)
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    
+    function parseFormattedNumber(str) {
+        return parseFloat(str.replace(/,/g, '')) || 0;
+    }
+    
+    function formatInput(input) {
+        const value = input.value.trim();
+        if (value && value !== '') {
+            const cleanValue = value.replace(/,/g, '');
+            const numValue = parseFloat(cleanValue);
+            if (!isNaN(numValue) && numValue >= 0) {
+                input.value = numValue.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+        }
+    }
+    
+    function formatWhileTyping(input) {
+        input.addEventListener('input', function(e) {
+            const cursorPosition = e.target.selectionStart;
+            const value = e.target.value;
+            const cleanValue = value.replace(/,/g, '');
+            
+            if (cleanValue === '' || cleanValue === '.' || cleanValue.endsWith('.') || 
+                (!isNaN(cleanValue) && cleanValue >= 0)) {
+                
+                if (cleanValue === '.' || cleanValue.endsWith('.')) {
+                    return;
+                }
+                if (cleanValue === '') {
+                    return;
+                }
+                
+                const formatted = parseFloat(cleanValue).toLocaleString('en-US', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                });
+                
+                e.target.value = formatted;
+                const newPosition = formatted.length - (value.length - cursorPosition);
+                e.target.setSelectionRange(newPosition, newPosition);
+            }
+        });
+    }
+    
+    function restrictDecimalInput(input) {
+        input.addEventListener('keypress', function(e) {
+            const char = String.fromCharCode(e.which);
+            const currentValue = e.target.value.replace(/,/g, '');
+            
+            if (!/[0-9.]/.test(char) || (char === '.' && currentValue.includes('.'))) {
+                e.preventDefault();
+            }
+        });
+    }
+    
+    // Format service cost field (must be done before formset check)
+    const serviceCostInput = document.querySelector('input[name="cost"]');
+    if (serviceCostInput) {
+        // Format existing value on page load (for edit mode)
+        if (serviceCostInput.value && serviceCostInput.value.trim() !== '') {
+            const existingValue = parseFloat(serviceCostInput.value.replace(/,/g, ''));
+            if (!isNaN(existingValue) && existingValue >= 0) {
+                serviceCostInput.value = existingValue.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+        }
+        
+        formatWhileTyping(serviceCostInput);
+        restrictDecimalInput(serviceCostInput);
+        serviceCostInput.addEventListener('blur', function() {
+            formatInput(this);
+        });
+    }
+    
+    // Formset handling (only if formset exists)
     const partsFormset = document.getElementById('parts-tbody');
     const addPartBtn = document.getElementById('add-part-btn');
     const totalFormsInput = document.querySelector('#id_part_items-TOTAL_FORMS');
     
-    if (!totalFormsInput) return; // Exit if formset doesn't exist
+    let formCount = 0;
+    if (totalFormsInput) {
+        formCount = parseInt(totalFormsInput.value) || 0;
+    }
     
-    let formCount = parseInt(totalFormsInput.value);
-    
-    // Add new part form
-    addPartBtn.addEventListener('click', function() {
+    // Add new part form (only if button exists)
+    if (addPartBtn && totalFormsInput) {
+        addPartBtn.addEventListener('click', function() {
         // Find the first part row as template
         const firstPartRow = partsFormset.querySelector('.part-form');
         if (!firstPartRow) return;
@@ -367,9 +456,20 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
+        // Add formatting to the new cost input field
+        const newCostInput = newRow.querySelector('input[name$="-cost"]');
+        if (newCostInput) {
+            restrictDecimalInput(newCostInput);
+            formatWhileTyping(newCostInput);
+            newCostInput.addEventListener('blur', function() {
+                formatInput(this);
+            });
+        }
+        
         // Scroll to new row
         newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
+        });
+    }
     
     // Remove part form
     document.addEventListener('click', function(e) {
@@ -410,6 +510,78 @@ document.addEventListener('DOMContentLoaded', function() {
         if (firstRow) {
             firstRow.style.display = '';
         }
+    }
+    
+    // Format cost fields in parts table (only if formset exists)
+    const partsTable = document.getElementById('parts-table');
+    if (partsTable) {
+        document.querySelectorAll('#parts-table input[name$="-cost"]').forEach(function(input) {
+            // Format existing value on page load (for edit mode)
+            if (input.value && input.value.trim() !== '') {
+                const existingValue = parseFloat(input.value.replace(/,/g, ''));
+                if (!isNaN(existingValue) && existingValue >= 0) {
+                    input.value = existingValue.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+            }
+            
+            restrictDecimalInput(input);
+            formatWhileTyping(input);
+            input.addEventListener('blur', function() {
+                formatInput(this);
+            });
+        });
+    }
+    
+    // Listen for new part rows added
+    if (partsFormset && totalFormsInput) {
+        partsFormset.addEventListener('input', function(e) {
+            if (e.target.name && e.target.name.endsWith('-cost')) {
+                // Cost calculation if needed
+            }
+        });
+        
+        partsFormset.addEventListener('blur', function(e) {
+            if (e.target.name && e.target.name.endsWith('-cost')) {
+                formatInput(e.target);
+            }
+        }, true);
+    }
+    
+    // Clean cost fields before form submission (remove commas)
+    const pmsForm = document.querySelector('form[method="post"]');
+    if (pmsForm) {
+        pmsForm.addEventListener('submit', function(e) {
+            // Remove commas from service cost (re-query in case it wasn't found initially)
+            const costInput = document.querySelector('input[name="cost"]') || serviceCostInput;
+            if (costInput && costInput.value && costInput.value.trim() !== '') {
+                let cleanValue = costInput.value.replace(/,/g, '').trim();
+                if (cleanValue && !isNaN(parseFloat(cleanValue))) {
+                    const numValue = parseFloat(cleanValue);
+                    costInput.value = numValue.toFixed(2);
+                } else {
+                    costInput.value = '';
+                }
+            }
+            
+            // Remove commas from all cost inputs in parts table
+            const partsCostInputs = document.querySelectorAll('#parts-table input[name$="-cost"]');
+            if (partsCostInputs) {
+                partsCostInputs.forEach(function(input) {
+                    if (input.value && input.value.trim() !== '') {
+                        let cleanValue = input.value.replace(/,/g, '').trim();
+                        if (cleanValue && !isNaN(parseFloat(cleanValue))) {
+                            const numValue = parseFloat(cleanValue);
+                            input.value = numValue.toFixed(2);
+                        } else {
+                            input.value = '';
+                        }
+                    }
+                });
+            }
+        });
     }
 });
 </script>
