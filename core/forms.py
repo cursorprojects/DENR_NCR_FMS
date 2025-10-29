@@ -317,15 +317,47 @@ class UserForm(forms.ModelForm):
         required=False
     )
     
+class UserForm(forms.ModelForm):
+    password1 = forms.CharField(
+        label='Password',
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=False
+    )
+    password2 = forms.CharField(
+        label='Confirm Password',
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=False
+    )
+    
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'role', 'status', 'phone']
+        fields = [
+            'username', 'email', 'first_name', 'last_name', 'status', 'phone',
+            # Vehicle Permissions
+            'can_view_vehicles', 'can_add_vehicles', 'can_edit_vehicles', 'can_delete_vehicles',
+            # Repair Permissions
+            'can_view_repairs', 'can_add_repairs', 'can_edit_repairs', 'can_delete_repairs', 'can_complete_repairs',
+            # PMS Permissions
+            'can_view_pms', 'can_add_pms', 'can_edit_pms', 'can_delete_pms', 'can_complete_pms',
+            # Inspection Permissions
+            'can_view_inspections', 'can_add_inspections', 'can_edit_inspections', 'can_delete_inspections', 'can_approve_inspections',
+            # User Management Permissions
+            'can_view_users', 'can_add_users', 'can_edit_users', 'can_delete_users',
+            # Department Management Permissions
+            'can_view_departments', 'can_add_departments', 'can_edit_departments', 'can_delete_departments',
+            # Driver Management Permissions
+            'can_view_drivers', 'can_add_drivers', 'can_edit_drivers', 'can_delete_drivers',
+            # Repair Shop Management Permissions
+            'can_view_repair_shops', 'can_add_repair_shops', 'can_edit_repair_shops', 'can_delete_repair_shops',
+            # System Permissions
+            'can_view_reports', 'can_view_operational_status', 'can_view_activity_logs', 'can_view_admin_dashboard',
+            'can_view_system_manual', 'can_view_notifications', 'can_mark_notifications_read'
+        ]
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'role': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
         }

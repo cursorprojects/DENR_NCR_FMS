@@ -496,19 +496,16 @@ def logout_view(request):
 # User Management Views
 @login_required
 def user_list(request):
-    if not request.user.has_admin_access():
+    if not request.user.can_view_users:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('dashboard')
     
     users = User.objects.all()
     
     # Filtering
-    role_filter = request.GET.get('role', '')
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
     
-    if role_filter:
-        users = users.filter(role=role_filter)
     if status_filter:
         users = users.filter(status=status_filter)
     if search_query:
@@ -521,7 +518,6 @@ def user_list(request):
     
     context = {
         'users': users,
-        'role_filter': role_filter,
         'status_filter': status_filter,
         'search_query': search_query,
     }
@@ -531,7 +527,7 @@ def user_list(request):
 
 @login_required
 def user_create(request):
-    if not request.user.has_admin_access():
+    if not request.user.can_add_users:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('dashboard')
     
@@ -562,7 +558,7 @@ def user_create(request):
 
 @login_required
 def user_edit(request, pk):
-    if not request.user.has_admin_access():
+    if not request.user.can_edit_users:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('dashboard')
     
@@ -593,7 +589,7 @@ def user_edit(request, pk):
 
 @login_required
 def user_delete(request, pk):
-    if not request.user.has_admin_access():
+    if not request.user.can_delete_users:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('dashboard')
     
@@ -634,7 +630,7 @@ def activity_logs(request):
 
 @login_required
 def admin_dashboard(request):
-    if not request.user.has_admin_access():
+    if not request.user.can_view_admin_dashboard:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('dashboard')
     
@@ -643,10 +639,10 @@ def admin_dashboard(request):
     active_users = User.objects.filter(status='active').count()
     inactive_users = User.objects.filter(status='inactive').count()
     
-    # Role statistics
-    super_admins = User.objects.filter(role='super_admin').count()
-    fleet_managers = User.objects.filter(role='fleet_manager').count()
-    encoders = User.objects.filter(role='encoder').count()
+    # Permission statistics
+    admin_users = User.objects.filter(can_view_admin_dashboard=True).count()
+    manager_users = User.objects.filter(can_view_vehicles=True).count()
+    staff_users = User.objects.filter(can_view_repairs=True).count()
     
     # Recent activity
     recent_logs = ActivityLog.objects.all()[:10]
@@ -672,9 +668,9 @@ def admin_dashboard(request):
         'total_users': total_users,
         'active_users': active_users,
         'inactive_users': inactive_users,
-        'super_admins': super_admins,
-        'fleet_managers': fleet_managers,
-        'encoders': encoders,
+        'admin_users': admin_users,
+        'manager_users': manager_users,
+        'staff_users': staff_users,
         'recent_logs': recent_logs,
         'total_vehicles': total_vehicles,
         'operational_vehicles': operational_vehicles,

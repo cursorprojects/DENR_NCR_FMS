@@ -88,16 +88,16 @@
                     <p class="card-text text-muted">Manage system users, roles, and permissions</p>
                     <div class="row text-center mb-3">
                         <div class="col-4">
-                            <small class="text-muted">Super Admins</small>
-                            <div class="fw-bold">{{ super_admins }}</div>
+                            <small class="text-muted">Admins</small>
+                            <div class="fw-bold">{{ admin_users }}</div>
                         </div>
                         <div class="col-4">
-                            <small class="text-muted">Fleet Managers</small>
-                            <div class="fw-bold">{{ fleet_managers }}</div>
+                            <small class="text-muted">Managers</small>
+                            <div class="fw-bold">{{ manager_users }}</div>
                         </div>
                         <div class="col-4">
-                            <small class="text-muted">Encoders</small>
-                            <div class="fw-bold">{{ encoders }}</div>
+                            <small class="text-muted">Staff</small>
+                            <div class="fw-bold">{{ staff_users }}</div>
                         </div>
                     </div>
                     <a href="{% url 'user_list' %}" class="btn btn-primary">

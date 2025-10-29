@@ -5,23 +5,76 @@ from django.utils import timezone
 
 
 class CustomUser(AbstractUser):
-    ROLE_CHOICES = [
-        ('super_admin', 'Super Admin'),
-        ('fleet_manager', 'Fleet Manager'),
-        ('encoder', 'Encoder/Staff'),
-    ]
-    
     STATUS_CHOICES = [
         ('active', 'Active'),
         ('inactive', 'Inactive'),
     ]
     
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='encoder')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     phone = models.CharField(max_length=20, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_users')
+    
+    # Vehicle Permissions
+    can_view_vehicles = models.BooleanField(default=False)
+    can_add_vehicles = models.BooleanField(default=False)
+    can_edit_vehicles = models.BooleanField(default=False)
+    can_delete_vehicles = models.BooleanField(default=False)
+    
+    # Repair Permissions
+    can_view_repairs = models.BooleanField(default=False)
+    can_add_repairs = models.BooleanField(default=False)
+    can_edit_repairs = models.BooleanField(default=False)
+    can_delete_repairs = models.BooleanField(default=False)
+    can_complete_repairs = models.BooleanField(default=False)
+    
+    # PMS Permissions
+    can_view_pms = models.BooleanField(default=False)
+    can_add_pms = models.BooleanField(default=False)
+    can_edit_pms = models.BooleanField(default=False)
+    can_delete_pms = models.BooleanField(default=False)
+    can_complete_pms = models.BooleanField(default=False)
+    
+    # Inspection Permissions
+    can_view_inspections = models.BooleanField(default=False)
+    can_add_inspections = models.BooleanField(default=False)
+    can_edit_inspections = models.BooleanField(default=False)
+    can_delete_inspections = models.BooleanField(default=False)
+    can_approve_inspections = models.BooleanField(default=False)
+    
+    # User Management Permissions
+    can_view_users = models.BooleanField(default=False)
+    can_add_users = models.BooleanField(default=False)
+    can_edit_users = models.BooleanField(default=False)
+    can_delete_users = models.BooleanField(default=False)
+    
+    # Department Management Permissions
+    can_view_departments = models.BooleanField(default=False)
+    can_add_departments = models.BooleanField(default=False)
+    can_edit_departments = models.BooleanField(default=False)
+    can_delete_departments = models.BooleanField(default=False)
+    
+    # Driver Management Permissions
+    can_view_drivers = models.BooleanField(default=False)
+    can_add_drivers = models.BooleanField(default=False)
+    can_edit_drivers = models.BooleanField(default=False)
+    can_delete_drivers = models.BooleanField(default=False)
+    
+    # Repair Shop Management Permissions
+    can_view_repair_shops = models.BooleanField(default=False)
+    can_add_repair_shops = models.BooleanField(default=False)
+    can_edit_repair_shops = models.BooleanField(default=False)
+    can_delete_repair_shops = models.BooleanField(default=False)
+    
+    # System Permissions
+    can_view_reports = models.BooleanField(default=False)
+    can_view_operational_status = models.BooleanField(default=False)
+    can_view_activity_logs = models.BooleanField(default=False)
+    can_view_admin_dashboard = models.BooleanField(default=False)
+    can_view_system_manual = models.BooleanField(default=False)
+    can_view_notifications = models.BooleanField(default=False)
+    can_mark_notifications_read = models.BooleanField(default=False)
     
     # Override the related_name for groups and user_permissions
     groups = models.ManyToManyField(
@@ -42,13 +95,35 @@ class CustomUser(AbstractUser):
     )
     
     def __str__(self):
-        return f"{self.get_full_name()} ({self.get_role_display()})"
-    
-    def has_fleet_manager_access(self):
-        return self.role in ['super_admin', 'fleet_manager']
+        return f"{self.get_full_name()} ({self.username})"
     
     def has_admin_access(self):
-        return self.role == 'super_admin'
+        """Check if user has admin dashboard access"""
+        return self.can_view_admin_dashboard
+    
+    def has_fleet_manager_access(self):
+        """Check if user has fleet manager level access (can manage vehicles, repairs, PMS)"""
+        return (self.can_view_vehicles or self.can_view_repairs or self.can_view_pms or 
+                self.can_view_inspections or self.can_view_users)
+    
+    def get_permission_summary(self):
+        """Get a summary of user's permissions"""
+        permissions = []
+        if self.can_view_admin_dashboard:
+            permissions.append("Admin Dashboard")
+        if self.can_view_users:
+            permissions.append("User Management")
+        if self.can_view_vehicles:
+            permissions.append("Vehicle Management")
+        if self.can_view_repairs:
+            permissions.append("Repair Management")
+        if self.can_view_pms:
+            permissions.append("PMS Management")
+        if self.can_view_inspections:
+            permissions.append("Inspection Management")
+        if self.can_view_reports:
+            permissions.append("Reports")
+        return ", ".join(permissions) if permissions else "No permissions"
     
     class Meta:
         verbose_name = 'User'

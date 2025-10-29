@@ -24,15 +24,6 @@
                                    value="{{ search_query }}" placeholder="Search users...">
                         </div>
                         <div class="col-md-3">
-                            <label for="role" class="form-label">Role</label>
-                            <select class="form-select" id="role" name="role">
-                                <option value="">All Roles</option>
-                                <option value="super_admin" {% if role_filter == 'super_admin' %}selected{% endif %}>Super Admin</option>
-                                <option value="fleet_manager" {% if role_filter == 'fleet_manager' %}selected{% endif %}>Fleet Manager</option>
-                                <option value="encoder" {% if role_filter == 'encoder' %}selected{% endif %}>Encoder/Staff</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">All Status</option>
@@ -62,9 +53,9 @@
                                     <th>Username</th>
                                     <th>Full Name</th>
                                     <th>Email</th>
-                                    <th>Role</th>
                                     <th>Status</th>
                                     <th>Phone</th>
+                                    <th>Permissions</th>
                                     <th>Date Joined</th>
                                     <th>Actions</th>
                                 </tr>
@@ -83,19 +74,14 @@
                                     <td>{{ user.get_full_name }}</td>
                                     <td>{{ user.email }}</td>
                                     <td>
-                                        <span class="badge 
-                                            {% if user.role == 'super_admin' %}bg-danger
-                                            {% elif user.role == 'fleet_manager' %}bg-warning
-                                            {% else %}bg-info{% endif %}">
-                                            {{ user.get_role_display }}
-                                        </span>
-                                    </td>
-                                    <td>
                                         <span class="badge {% if user.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">
                                             {{ user.get_status_display }}
                                         </span>
                                     </td>
                                     <td>{{ user.phone|default:"-" }}</td>
+                                    <td>
+                                        <small class="text-muted">{{ user.get_permission_summary }}</small>
+                                    </td>
                                     <td>{{ user.date_joined|date:"M d, Y" }}</td>
                                     <td>
                                         <div class="btn-group" role="group">

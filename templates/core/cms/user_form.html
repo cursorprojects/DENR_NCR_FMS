@@ -8,9 +8,9 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="fas fa-user me-2"></i>{{ title }}</h2>
+                <h2><i class="bi bi-person me-2"></i>{{ title }}</h2>
                 <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Users
+                    <i class="bi bi-arrow-left me-2"></i>Back to Users
                 </a>
             </div>
             
@@ -24,7 +24,7 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="{{ form.username.id_for_label }}" class="form-label">
-                                                <i class="fas fa-user me-2"></i>Username *
+                                                <i class="bi bi-person me-2"></i>Username *
                                             </label>
                                             {{ form.username }}
                                             {% if form.username.errors %}
@@ -35,7 +35,7 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="{{ form.email.id_for_label }}" class="form-label">
-                                                <i class="fas fa-envelope me-2"></i>Email *
+                                                <i class="bi bi-envelope me-2"></i>Email *
                                             </label>
                                             {{ form.email }}
                                             {% if form.email.errors %}
@@ -49,7 +49,7 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="{{ form.first_name.id_for_label }}" class="form-label">
-                                                <i class="fas fa-user me-2"></i>First Name *
+                                                <i class="bi bi-person me-2"></i>First Name *
                                             </label>
                                             {{ form.first_name }}
                                             {% if form.first_name.errors %}
@@ -60,7 +60,7 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="{{ form.last_name.id_for_label }}" class="form-label">
-                                                <i class="fas fa-user me-2"></i>Last Name *
+                                                <i class="bi bi-person me-2"></i>Last Name *
                                             </label>
                                             {{ form.last_name }}
                                             {% if form.last_name.errors %}
@@ -73,19 +73,8 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="{{ form.role.id_for_label }}" class="form-label">
-                                                <i class="fas fa-user-tag me-2"></i>Role *
-                                            </label>
-                                            {{ form.role }}
-                                            {% if form.role.errors %}
-                                                <div class="text-danger">{{ form.role.errors.0 }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
                                             <label for="{{ form.status.id_for_label }}" class="form-label">
-                                                <i class="fas fa-toggle-on me-2"></i>Status *
+                                                <i class="bi bi-toggle-on me-2"></i>Status *
                                             </label>
                                             {{ form.status }}
                                             {% if form.status.errors %}
@@ -99,7 +88,7 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="{{ form.phone.id_for_label }}" class="form-label">
-                                                <i class="fas fa-phone me-2"></i>Phone
+                                                <i class="bi bi-telephone me-2"></i>Phone
                                             </label>
                                             {{ form.phone }}
                                             {% if form.phone.errors %}
@@ -113,7 +102,7 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="{{ form.password1.id_for_label }}" class="form-label">
-                                                <i class="fas fa-lock me-2"></i>Password
+                                                <i class="bi bi-lock me-2"></i>Password
                                                 {% if not form.instance.pk %}(Required){% else %}(Leave blank to keep current){% endif %}
                                             </label>
                                             {{ form.password1 }}
@@ -125,12 +114,302 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="{{ form.password2.id_for_label }}" class="form-label">
-                                                <i class="fas fa-lock me-2"></i>Confirm Password
+                                                <i class="bi bi-lock me-2"></i>Confirm Password
                                             </label>
                                             {{ form.password2 }}
                                             {% if form.password2.errors %}
                                                 <div class="text-danger">{{ form.password2.errors.0 }}</div>
                                             {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Permissions Section -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5 class="mb-3"><i class="bi bi-shield-check me-2"></i>User Permissions</h5>
+                                        <p class="text-muted">Select the permissions this user should have:</p>
+                                        
+                                        <!-- Vehicle Management -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6 class="mb-0"><i class="bi bi-car-front me-2"></i>Vehicle Management</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_view_vehicles }}
+                                                            <label class="form-check-label" for="{{ form.can_view_vehicles.id_for_label }}">
+                                                                View Vehicles
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_add_vehicles }}
+                                                            <label class="form-check-label" for="{{ form.can_add_vehicles.id_for_label }}">
+                                                                Add Vehicles
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_edit_vehicles }}
+                                                            <label class="form-check-label" for="{{ form.can_edit_vehicles.id_for_label }}">
+                                                                Edit Vehicles
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_delete_vehicles }}
+                                                            <label class="form-check-label" for="{{ form.can_delete_vehicles.id_for_label }}">
+                                                                Delete Vehicles
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Repair Management -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6 class="mb-0"><i class="bi bi-tools me-2"></i>Repair Management</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_view_repairs }}
+                                                            <label class="form-check-label" for="{{ form.can_view_repairs.id_for_label }}">
+                                                                View Repairs
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_add_repairs }}
+                                                            <label class="form-check-label" for="{{ form.can_add_repairs.id_for_label }}">
+                                                                Add Repairs
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_edit_repairs }}
+                                                            <label class="form-check-label" for="{{ form.can_edit_repairs.id_for_label }}">
+                                                                Edit Repairs
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_delete_repairs }}
+                                                            <label class="form-check-label" for="{{ form.can_delete_repairs.id_for_label }}">
+                                                                Delete Repairs
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_complete_repairs }}
+                                                            <label class="form-check-label" for="{{ form.can_complete_repairs.id_for_label }}">
+                                                                Complete Repairs
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- PMS Management -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6 class="mb-0"><i class="bi bi-gear me-2"></i>PMS Management</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_view_pms }}
+                                                            <label class="form-check-label" for="{{ form.can_view_pms.id_for_label }}">
+                                                                View PMS
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_add_pms }}
+                                                            <label class="form-check-label" for="{{ form.can_add_pms.id_for_label }}">
+                                                                Add PMS
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_edit_pms }}
+                                                            <label class="form-check-label" for="{{ form.can_edit_pms.id_for_label }}">
+                                                                Edit PMS
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_delete_pms }}
+                                                            <label class="form-check-label" for="{{ form.can_delete_pms.id_for_label }}">
+                                                                Delete PMS
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_complete_pms }}
+                                                            <label class="form-check-label" for="{{ form.can_complete_pms.id_for_label }}">
+                                                                Complete PMS
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Inspection Management -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Inspection Management</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_view_inspections }}
+                                                            <label class="form-check-label" for="{{ form.can_view_inspections.id_for_label }}">
+                                                                View Inspections
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_add_inspections }}
+                                                            <label class="form-check-label" for="{{ form.can_add_inspections.id_for_label }}">
+                                                                Add Inspections
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_edit_inspections }}
+                                                            <label class="form-check-label" for="{{ form.can_edit_inspections.id_for_label }}">
+                                                                Edit Inspections
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_delete_inspections }}
+                                                            <label class="form-check-label" for="{{ form.can_delete_inspections.id_for_label }}">
+                                                                Delete Inspections
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_approve_inspections }}
+                                                            <label class="form-check-label" for="{{ form.can_approve_inspections.id_for_label }}">
+                                                                Approve Inspections
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- User Management -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6 class="mb-0"><i class="bi bi-people me-2"></i>User Management</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_view_users }}
+                                                            <label class="form-check-label" for="{{ form.can_view_users.id_for_label }}">
+                                                                View Users
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_add_users }}
+                                                            <label class="form-check-label" for="{{ form.can_add_users.id_for_label }}">
+                                                                Add Users
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_edit_users }}
+                                                            <label class="form-check-label" for="{{ form.can_edit_users.id_for_label }}">
+                                                                Edit Users
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_delete_users }}
+                                                            <label class="form-check-label" for="{{ form.can_delete_users.id_for_label }}">
+                                                                Delete Users
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- System Permissions -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6 class="mb-0"><i class="bi bi-gear me-2"></i>System Permissions</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_view_admin_dashboard }}
+                                                            <label class="form-check-label" for="{{ form.can_view_admin_dashboard.id_for_label }}">
+                                                                Admin Dashboard
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_view_reports }}
+                                                            <label class="form-check-label" for="{{ form.can_view_reports.id_for_label }}">
+                                                                View Reports
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_view_activity_logs }}
+                                                            <label class="form-check-label" for="{{ form.can_view_activity_logs.id_for_label }}">
+                                                                Activity Logs
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            {{ form.can_view_notifications }}
+                                                            <label class="form-check-label" for="{{ form.can_view_notifications.id_for_label }}">
+                                                                View Notifications
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -143,10 +422,10 @@
                                 
                                 <div class="d-flex justify-content-between">
                                     <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">
-                                        <i class="fas fa-times me-2"></i>Cancel
+                                        <i class="bi bi-x me-2"></i>Cancel
                                     </a>
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save me-2"></i>Save User
+                                        <i class="bi bi-save me-2"></i>Save User
                                     </button>
                                 </div>
                             </form>
