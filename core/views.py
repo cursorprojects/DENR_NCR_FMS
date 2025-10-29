@@ -203,6 +203,35 @@ def vehicle_delete(request, pk):
 
 
 @login_required
+def vehicle_status_change(request, pk):
+    """Dedicated view for changing vehicle status"""
+    vehicle = get_object_or_404(Vehicle, pk=pk)
+    
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        reason = request.POST.get('reason', '')
+        
+        if new_status in [choice[0] for choice in Vehicle.STATUS_CHOICES]:
+            old_status = vehicle.status
+            vehicle.update_status(new_status, user=request.user, reason=reason)
+            
+            messages.success(
+                request, 
+                f'Vehicle status changed from {old_status} to {new_status} successfully!'
+            )
+            return redirect('vehicle_detail', pk=pk)
+        else:
+            messages.error(request, 'Invalid status selected.')
+    
+    context = {
+        'vehicle': vehicle,
+        'status_choices': Vehicle.STATUS_CHOICES,
+    }
+    
+    return render(request, 'core/vehicle_status_change.html', context)
+
+
+@login_required
 def repair_detail(request, pk):
     repair = get_object_or_404(Repair, pk=pk)
     return render(request, 'core/repair_detail.html', {'repair': repair})

@@ -143,6 +143,9 @@ class Vehicle(models.Model):
     division = models.ForeignKey(Division, on_delete=models.SET_NULL, null=True, blank=True)
     assigned_driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Serviceable')
+    status_changed_at = models.DateTimeField(null=True, blank=True, verbose_name='Status Changed At')
+    status_changed_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicle_status_changes', verbose_name='Status Changed By')
+    status_change_reason = models.TextField(blank=True, verbose_name='Status Change Reason')
     date_acquired = models.DateField()
     current_mileage = models.IntegerField(default=0)
     photo = models.ImageField(upload_to='vehicles/', blank=True, null=True)
@@ -158,6 +161,41 @@ class Vehicle(models.Model):
     
     def __str__(self):
         return f"{self.plate_number} - {self.brand} {self.model}"
+    
+    def update_status(self, new_status, user=None, reason='', auto_update=False):
+        """Update vehicle status with tracking"""
+        from django.utils import timezone
+        
+        old_status = self.status
+        self.status = new_status
+        self.status_changed_at = timezone.now()
+        self.status_changed_by = user
+        self.status_change_reason = reason
+        
+        # Save the vehicle
+        self.save()
+        
+        # Create notification if not auto-update
+        if not auto_update and user:
+            self._create_status_change_notification(old_status, new_status, user, reason)
+        
+        return True
+    
+    def _create_status_change_notification(self, old_status, new_status, user, reason):
+        """Create notification for status change"""
+        try:
+            Notification.objects.create(
+                user=user,
+                notification_type='vehicle_status',
+                title=f'Vehicle Status Changed: {self.plate_number}',
+                message=f'Vehicle {self.plate_number} status changed from {old_status} to {new_status}. Reason: {reason}',
+                priority='medium',
+                related_object_type='Vehicle',
+                related_object_id=self.id
+            )
+        except Exception as e:
+            # Log error but don't fail the status update
+            print(f"Error creating status change notification: {e}")
     
     @property
     def total_repair_costs(self):
@@ -245,17 +283,26 @@ class Repair(models.Model):
     
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # If repair status is completed, check if vehicle should be serviceable
-        if self.status == 'Completed':
-            ongoing_repairs = self.vehicle.repairs.filter(status='Ongoing').exists()
-            if not ongoing_repairs and self.vehicle.status == 'Under Repair':
-                self.vehicle.status = 'Serviceable'
-                self.vehicle.save()
         
-        # If repair status is ongoing, set vehicle to under repair
-        if self.status == 'Ongoing' and self.vehicle.status == 'Serviceable':
-            self.vehicle.status = 'Under Repair'
-            self.vehicle.save()
+        # Auto-update vehicle status based on repair status
+        if self.status == 'Completed':
+            # Check if there are any other ongoing repairs for this vehicle
+            ongoing_repairs = self.vehicle.repairs.filter(status='Ongoing').exclude(id=self.id)
+            if not ongoing_repairs.exists() and self.vehicle.status == 'Under Repair':
+                # No more ongoing repairs, set vehicle to serviceable
+                self.vehicle.update_status(
+                    'Serviceable', 
+                    reason=f'All repairs completed for vehicle {self.vehicle.plate_number}',
+                    auto_update=True
+                )
+        
+        elif self.status == 'Ongoing' and self.vehicle.status == 'Serviceable':
+            # Set vehicle to under repair when repair starts
+            self.vehicle.update_status(
+                'Under Repair',
+                reason=f'Repair started for vehicle {self.vehicle.plate_number}',
+                auto_update=True
+            )
     
     class Meta:
         ordering = ['-date_of_repair', '-created_at']
@@ -352,6 +399,31 @@ class PMS(models.Model):
     
     def __str__(self):
         return f"{self.vehicle.plate_number} - {self.service_type} - {self.scheduled_date}"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        
+        # Auto-update vehicle status based on PMS status
+        if self.status == 'In Progress' and self.vehicle.status == 'Serviceable':
+            # Set vehicle to under repair when PMS starts
+            self.vehicle.update_status(
+                'Under Repair',
+                reason=f'PMS in progress for vehicle {self.vehicle.plate_number}',
+                auto_update=True
+            )
+        
+        elif self.status == 'Completed':
+            # Check if there are ongoing repairs or PMS in progress
+            ongoing_repairs = self.vehicle.repairs.filter(status='Ongoing').exists()
+            ongoing_pms = self.vehicle.pms_records.filter(status='In Progress').exclude(id=self.id).exists()
+            
+            if not ongoing_repairs and not ongoing_pms and self.vehicle.status == 'Under Repair':
+                # No ongoing maintenance, set vehicle to serviceable
+                self.vehicle.update_status(
+                    'Serviceable',
+                    reason=f'PMS completed for vehicle {self.vehicle.plate_number}',
+                    auto_update=True
+                )
     
     class Meta:
         verbose_name = 'Preventive Maintenance Service'

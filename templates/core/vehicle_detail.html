@@ -50,14 +50,17 @@
                         <strong>Type:</strong> {{ vehicle.vehicle_type }}
                     </div>
                     <div class="col-md-6 mb-2">
-                        <strong>Status:</strong>
+                        <strong>Status:</strong> 
                         {% if vehicle.status == 'Serviceable' %}
                             <span class="badge bg-success">Serviceable</span>
                         {% elif vehicle.status == 'Under Repair' %}
                             <span class="badge bg-warning text-dark">Under Repair</span>
                         {% elif vehicle.status == 'Unserviceable' %}
-                            <span class="badge bg-secondary">Unserviceable</span>
+                            <span class="badge bg-danger">Unserviceable</span>
                         {% endif %}
+                        <a href="{% url 'vehicle_status_change' vehicle.pk %}" class="btn btn-sm btn-outline-primary ms-2" title="Change Status">
+                            <i class="bi bi-gear"></i> Change Status
+                        </a>
                     </div>
                     <div class="col-md-6 mb-2">
                         <strong>Division:</strong> {{ vehicle.division|default:"-" }}
@@ -108,6 +111,27 @@
                     </div>
                     {% endif %}
                 </div>
+                {% if vehicle.status_changed_at or vehicle.status_changed_by %}
+                <hr>
+                <h6 class="mb-3">Status Change Information</h6>
+                <div class="row">
+                    {% if vehicle.status_changed_at %}
+                    <div class="col-md-6 mb-2">
+                        <strong>Last Status Change:</strong> {{ vehicle.status_changed_at|date:"M d, Y g:i A" }}
+                    </div>
+                    {% endif %}
+                    {% if vehicle.status_changed_by %}
+                    <div class="col-md-6 mb-2">
+                        <strong>Changed By:</strong> {{ vehicle.status_changed_by.get_full_name }}
+                    </div>
+                    {% endif %}
+                    {% if vehicle.status_change_reason %}
+                    <div class="col-md-12 mb-2">
+                        <strong>Reason:</strong> {{ vehicle.status_change_reason }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
                 {% if vehicle.registration_document %}
                 <hr>
                 <div class="row">
@@ -211,7 +235,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">PMS History</h5>
                 <a href="{% url 'pms_create' %}?vehicle={{ vehicle.id }}" class="btn btn-sm btn-primary">
-                    <i class="fas fa-plus"></i> Add PMS Record
+                    <i class="bi bi-plus-lg"></i> Add PMS Record
                 </a>
             </div>
             <div class="card-body">
@@ -266,10 +290,10 @@
                                 <td>
                                     <div class="btn-group" role="group">
                                         <a href="{% url 'pms_detail' pms.id %}" class="btn btn-sm btn-outline-info" title="View">
-                                            <i class="fas fa-eye"></i>
+                                            <i class="bi bi-eye"></i>
                                         </a>
                                         <a href="{% url 'pms_edit' pms.id %}" class="btn btn-sm btn-outline-primary" title="Edit">
-                                            <i class="fas fa-edit"></i>
+                                            <i class="bi bi-pencil"></i>
                                         </a>
                                     </div>
                                 </td>

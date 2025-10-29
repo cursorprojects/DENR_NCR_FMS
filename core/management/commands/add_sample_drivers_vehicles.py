@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
-from core.models import Driver, Vehicle, Division
+from django.utils import timezone
+from core.models import Driver, Vehicle, Division, CustomUser
 from decimal import Decimal
 from datetime import date, timedelta
 import random
@@ -136,6 +137,11 @@ class Command(BaseCommand):
             },
         ]
         
+        # Get a user for status tracking (use first super admin or create one)
+        admin_user = CustomUser.objects.filter(role='super_admin').first()
+        if not admin_user:
+            admin_user = CustomUser.objects.first()
+        
         # Create vehicles
         created_vehicles = []
         for vehicle_data in vehicles_data:
@@ -147,6 +153,11 @@ class Command(BaseCommand):
                 vehicle_data['assigned_driver'] = random.choice(drivers)
             else:
                 vehicle_data['assigned_driver'] = None
+            
+            # Add status tracking fields
+            vehicle_data['status_changed_at'] = timezone.now() - timedelta(days=random.randint(1, 30))
+            vehicle_data['status_changed_by'] = admin_user
+            vehicle_data['status_change_reason'] = f'Initial status set to {vehicle_data["status"]} during sample data creation'
             
             vehicle, created = Vehicle.objects.get_or_create(
                 plate_number=vehicle_data['plate_number'],

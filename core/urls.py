@@ -41,6 +41,7 @@ urlpatterns = [
     path('vehicles/add/', views.vehicle_create, name='vehicle_create'),
     path('vehicles/<int:pk>/edit/', views.vehicle_edit, name='vehicle_edit'),
     path('vehicles/<int:pk>/delete/', views.vehicle_delete, name='vehicle_delete'),
+    path('vehicles/<int:pk>/status-change/', views.vehicle_status_change, name='vehicle_status_change'),
     
     # Repair URLs
     path('repairs/', views.repair_list, name='repair_list'),

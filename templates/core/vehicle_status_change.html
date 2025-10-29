@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Change Vehicle Status - {{ vehicle.plate_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="bi bi-gear"></i> Change Vehicle Status
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Vehicle Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Vehicle Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Plate Number:</strong></td>
+                                    <td>{{ vehicle.plate_number }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Make & Model:</strong></td>
+                                    <td>{{ vehicle.brand }} {{ vehicle.model }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Current Status:</strong></td>
+                                    <td>
+                                        {% if vehicle.status == 'Serviceable' %}
+                                            <span class="badge bg-success">{{ vehicle.status }}</span>
+                                        {% elif vehicle.status == 'Under Repair' %}
+                                            <span class="badge bg-warning">{{ vehicle.status }}</span>
+                                        {% elif vehicle.status == 'Unserviceable' %}
+                                            <span class="badge bg-danger">{{ vehicle.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if vehicle.status_changed_at %}
+                                <tr>
+                                    <td><strong>Last Changed:</strong></td>
+                                    <td>{{ vehicle.status_changed_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if vehicle.status_changed_by %}
+                                <tr>
+                                    <td><strong>Changed By:</strong></td>
+                                    <td>{{ vehicle.status_changed_by.get_full_name }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            {% if vehicle.status_change_reason %}
+                            <h5>Last Change Reason</h5>
+                            <div class="alert alert-info">
+                                {{ vehicle.status_change_reason }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Status Change Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">
+                                        <strong>New Status</strong>
+                                    </label>
+                                    <select class="form-select" id="status" name="status" required>
+                                        <option value="">Select new status...</option>
+                                        {% for value, label in status_choices %}
+                                        <option value="{{ value }}" {% if vehicle.status == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="reason" class="form-label">
+                                        <strong>Reason for Status Change</strong>
+                                    </label>
+                                    <textarea class="form-control" id="reason" name="reason" rows="3" 
+                                              placeholder="Please provide a reason for changing the vehicle status..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-lg"></i> Update Status
+                                    </button>
+                                    <a href="{% url 'vehicle_detail' vehicle.pk %}" class="btn btn-secondary">
+                                        <i class="bi bi-arrow-left"></i> Back to Vehicle Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.getElementById('status');
+    const reasonTextarea = document.getElementById('reason');
+    
+    // Add status change descriptions
+    const statusDescriptions = {
+        'Serviceable': 'Vehicle is operational and ready for use',
+        'Under Repair': 'Vehicle is currently being repaired or maintained',
+        'Unserviceable': 'Vehicle is not operational and needs repair'
+    };
+    
+    // Add description below the select
+    const descriptionDiv = document.createElement('div');
+    descriptionDiv.className = 'form-text text-muted mt-1';
+    descriptionDiv.id = 'status-description';
+    statusSelect.parentNode.appendChild(descriptionDiv);
+    
+    statusSelect.addEventListener('change', function() {
+        const selectedStatus = this.value;
+        const description = statusDescriptions[selectedStatus] || '';
+        document.getElementById('status-description').textContent = description;
+        
+        // Auto-fill reason if changing to Unserviceable
+        if (selectedStatus === 'Unserviceable' && !reasonTextarea.value) {
+            reasonTextarea.value = 'Vehicle marked as unserviceable - requires repair or maintenance';
+        }
+    });
+    
+    // Trigger change event on page load
+    statusSelect.dispatchEvent(new Event('change'));
+});
+</script>
+{% endblock %}
