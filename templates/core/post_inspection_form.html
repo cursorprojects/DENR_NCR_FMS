@@ -10,13 +10,19 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title"><i class="bi bi-clipboard-check"></i> {{ title }}</h3>
-                    <a href="{% url 'post_inspection_list' %}" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left"></i> Back to List
-                    </a>
+                    <button onclick="history.back()" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </button>
                 </div>
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
+                        {% if request.GET.repair_id %}
+                            <input type="hidden" name="repair_id" value="{{ request.GET.repair_id }}">
+                        {% endif %}
+                        {% if request.GET.pms_id %}
+                            <input type="hidden" name="pms_id" value="{{ request.GET.pms_id }}">
+                        {% endif %}
                         
                         <!-- Basic Information -->
                         <div class="row mb-4">

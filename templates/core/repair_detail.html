@@ -16,6 +16,11 @@
                             <i class="bi bi-check-circle me-2"></i>Complete Repair
                         </a>
                     {% endif %}
+                    {% if repair.status == 'Ongoing' and not repair.post_inspection %}
+                        <a href="{% url 'post_inspection_create' %}?repair_id={{ repair.pk }}" class="btn btn-info me-2">
+                            <i class="bi bi-clipboard-check me-2"></i>Add Post-Inspection
+                        </a>
+                    {% endif %}
                     <a href="{% url 'repair_edit' repair.pk %}" class="btn btn-primary me-2">
                         <i class="bi bi-pencil me-2"></i>Edit Repair
                     </a>
@@ -236,6 +241,26 @@
                                             <a href="{% url 'post_inspection_detail' repair.post_inspection.id %}" class="btn btn-outline-success btn-sm">
                                                 <i class="bi bi-eye"></i> View Post-Inspection
                                             </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-secondary">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="bi bi-clipboard text-secondary"></i> Post-Inspection Report
+                                            </h6>
+                                            <p class="card-text small text-muted">
+                                                No post-inspection report has been created yet.
+                                            </p>
+                                            {% if repair.status == 'Ongoing' %}
+                                            <a href="{% url 'post_inspection_create' %}?repair_id={{ repair.pk }}" class="btn btn-success btn-sm">
+                                                <i class="bi bi-plus-circle"></i> Add Post-Inspection Report
+                                            </a>
+                                            {% else %}
+                                            <span class="text-muted small">Repair is completed. Post-inspection cannot be added.</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>

@@ -1620,6 +1620,26 @@ def post_inspection_create(request):
             report.inspected_by = request.user
             report.save()
             
+            # If repair_id is provided in POST, link the report to the repair
+            repair_id = request.POST.get('repair_id')
+            if repair_id:
+                try:
+                    repair = Repair.objects.get(pk=repair_id)
+                    repair.post_inspection = report
+                    repair.save()
+                except Repair.DoesNotExist:
+                    pass
+            
+            # If pms_id is provided in POST, link the report to the PMS
+            pms_id = request.POST.get('pms_id')
+            if pms_id:
+                try:
+                    pms = PMS.objects.get(pk=pms_id)
+                    pms.post_inspection = report
+                    pms.save()
+                except PMS.DoesNotExist:
+                    pass
+            
             # Log activity
             ActivityLog.objects.create(
                 user=request.user,
@@ -1636,6 +1656,34 @@ def post_inspection_create(request):
         form = PostInspectionReportForm()
         # Set default inspected_by to current user
         form.fields['inspected_by'].initial = request.user
+        
+        # Pre-populate form if repair_id is provided
+        repair_id = request.GET.get('repair_id')
+        if repair_id:
+            try:
+                repair = Repair.objects.get(pk=repair_id)
+                form.fields['vehicle'].initial = repair.vehicle
+                form.fields['report_type'].initial = 'repair'
+                form.fields['pre_inspection'].initial = repair.pre_inspection
+                # Filter pre-inspection to only show the repair's pre-inspection
+                if repair.pre_inspection:
+                    form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=repair.pre_inspection.pk)
+            except Repair.DoesNotExist:
+                pass
+        
+        # Pre-populate form if pms_id is provided
+        pms_id = request.GET.get('pms_id')
+        if pms_id:
+            try:
+                pms = PMS.objects.get(pk=pms_id)
+                form.fields['vehicle'].initial = pms.vehicle
+                form.fields['report_type'].initial = 'pms'
+                form.fields['pre_inspection'].initial = pms.pre_inspection
+                # Filter pre-inspection to only show the PMS's pre-inspection
+                if pms.pre_inspection:
+                    form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=pms.pre_inspection.pk)
+            except PMS.DoesNotExist:
+                pass
     
     return render(request, 'core/post_inspection_form.html', {'form': form, 'title': 'Create Post-Inspection Report'})
 
