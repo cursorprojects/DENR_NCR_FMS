@@ -35,9 +35,10 @@
                             <ul class="list-unstyled">
                                 <li><a href="#notifications" class="text-decoration-none">6. Notifications</a></li>
                                 <li><a href="#reports" class="text-decoration-none">7. Reports & Analytics</a></li>
-                                <li><a href="#user-management" class="text-decoration-none">8. User Management</a></li>
-                                <li><a href="#troubleshooting" class="text-decoration-none">9. Troubleshooting</a></li>
-                                <li><a href="#best-practices" class="text-decoration-none">10. Best Practices</a></li>
+                                <li><a href="#user-management" class="text-decoration-none">8. User Management & Permissions</a></li>
+                                <li><a href="#sample-data" class="text-decoration-none">9. Sample Data & Testing</a></li>
+                                <li><a href="#troubleshooting" class="text-decoration-none">10. Troubleshooting</a></li>
+                                <li><a href="#best-practices" class="text-decoration-none">11. Best Practices</a></li>
                             </ul>
                         </div>
                     </div>
@@ -58,8 +59,10 @@
                         <li><strong>Repair Management:</strong> Complete repair workflow with pre/post inspections</li>
                         <li><strong>PMS (Preventive Maintenance Service):</strong> Scheduled maintenance with inspection requirements</li>
                         <li><strong>Inspection Reports:</strong> Pre and post-inspection documentation</li>
+                        <li><strong>Granular Permissions:</strong> Customizable user access control system</li>
                         <li><strong>Notifications:</strong> Real-time alerts and updates</li>
                         <li><strong>Reports:</strong> Analytics and reporting capabilities</li>
+                        <li><strong>Comprehensive Sample Data:</strong> Pre-loaded with realistic test data</li>
                     </ul>
 
                     <div class="alert alert-info" role="alert">
@@ -600,31 +603,276 @@
             <!-- User Management -->
             <div class="card mb-4" id="user-management">
                 <div class="card-header">
-                    <h4><i class="bi bi-people me-2"></i>8. User Management</h4>
+                    <h4><i class="bi bi-people me-2"></i>8. User Management & Permissions</h4>
                 </div>
                 <div class="card-body">
-                    <h6>User Roles:</h6>
-                    <ul>
-                        <li><strong>Super Admin:</strong> Full system access, can approve inspections</li>
-                        <li><strong>Admin:</strong> Most system functions, can approve inspections</li>
-                        <li><strong>User:</strong> Basic functions, cannot approve inspections</li>
-                    </ul>
+                    <div class="alert alert-info" role="alert">
+                        <h6><i class="bi bi-info-circle"></i> New Permission System</h6>
+                        <p class="mb-0">The system now uses granular permissions instead of fixed roles. Each user can be granted specific permissions for different modules and actions.</p>
+                    </div>
+
+                    <h6>Permission Categories:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Vehicle Management:</h6>
+                            <ul>
+                                <li><strong>View Vehicles:</strong> See vehicle list and details</li>
+                                <li><strong>Add Vehicles:</strong> Create new vehicle records</li>
+                                <li><strong>Edit Vehicles:</strong> Modify existing vehicle information</li>
+                                <li><strong>Delete Vehicles:</strong> Remove vehicle records</li>
+                            </ul>
+                            
+                            <h6>Repair Management:</h6>
+                            <ul>
+                                <li><strong>View Repairs:</strong> See repair list and details</li>
+                                <li><strong>Add Repairs:</strong> Create new repair records</li>
+                                <li><strong>Edit Repairs:</strong> Modify existing repairs</li>
+                                <li><strong>Delete Repairs:</strong> Remove repair records</li>
+                                <li><strong>Complete Repairs:</strong> Mark repairs as completed</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>PMS Management:</h6>
+                            <ul>
+                                <li><strong>View PMS:</strong> See PMS list and details</li>
+                                <li><strong>Add PMS:</strong> Create new PMS records</li>
+                                <li><strong>Edit PMS:</strong> Modify existing PMS</li>
+                                <li><strong>Delete PMS:</strong> Remove PMS records</li>
+                                <li><strong>Complete PMS:</strong> Mark PMS as completed</li>
+                            </ul>
+                            
+                            <h6>Inspection Management:</h6>
+                            <ul>
+                                <li><strong>View Inspections:</strong> See inspection reports</li>
+                                <li><strong>Add Inspections:</strong> Create inspection reports</li>
+                                <li><strong>Edit Inspections:</strong> Modify inspection reports</li>
+                                <li><strong>Delete Inspections:</strong> Remove inspection reports</li>
+                                <li><strong>Approve Inspections:</strong> Approve inspection reports</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>User Management:</h6>
+                            <ul>
+                                <li><strong>View Users:</strong> See user list and details</li>
+                                <li><strong>Add Users:</strong> Create new user accounts</li>
+                                <li><strong>Edit Users:</strong> Modify user information and permissions</li>
+                                <li><strong>Delete Users:</strong> Remove user accounts</li>
+                            </ul>
+                            
+                            <h6>System Permissions:</h6>
+                            <ul>
+                                <li><strong>Admin Dashboard:</strong> Access admin dashboard</li>
+                                <li><strong>View Reports:</strong> Access reporting features</li>
+                                <li><strong>Activity Logs:</strong> View system activity logs</li>
+                                <li><strong>Notifications:</strong> View and manage notifications</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Department Management:</h6>
+                            <ul>
+                                <li><strong>View Departments:</strong> See department list</li>
+                                <li><strong>Add Departments:</strong> Create new departments</li>
+                                <li><strong>Edit Departments:</strong> Modify department information</li>
+                                <li><strong>Delete Departments:</strong> Remove departments</li>
+                            </ul>
+                            
+                            <h6>Driver Management:</h6>
+                            <ul>
+                                <li><strong>View Drivers:</strong> See driver list and details</li>
+                                <li><strong>Add Drivers:</strong> Create new driver records</li>
+                                <li><strong>Edit Drivers:</strong> Modify driver information</li>
+                                <li><strong>Delete Drivers:</strong> Remove driver records</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h6>Sample User Accounts:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Name</th>
+                                    <th>Password</th>
+                                    <th>Key Permissions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>admin</code></td>
+                                    <td>System Administrator</td>
+                                    <td><code>admin123</code></td>
+                                    <td>All permissions (Full Access)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>fleet_manager</code></td>
+                                    <td>Sarah Johnson</td>
+                                    <td><code>password123</code></td>
+                                    <td>Vehicle, Repair, PMS, Inspection Management + Reports</td>
+                                </tr>
+                                <tr>
+                                    <td><code>encoder_staff</code></td>
+                                    <td>Michael Brown</td>
+                                    <td><code>password123</code></td>
+                                    <td>Vehicle, Repair, PMS, Inspection Management (View/Add)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>inspector</code></td>
+                                    <td>Lisa Wilson</td>
+                                    <td><code>password123</code></td>
+                                    <td>Vehicle, Repair, PMS, Inspection Management (View/Add/Edit/Approve)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
                     <h6>Managing Users (Admin Only):</h6>
                     <ol>
                         <li>Go to <strong>Admin Dashboard</strong></li>
-                        <li>Click <strong>"Users"</strong></li>
+                        <li>Click <strong>"User Management"</strong></li>
                         <li>Click <strong>"Add User"</strong> to create new users</li>
+                        <li>Fill in user information and select permissions using checkboxes</li>
                         <li>Edit existing users by clicking the edit button</li>
-                        <li>Set appropriate roles and permissions</li>
+                        <li>Modify permissions as needed using the permission checkboxes</li>
                     </ol>
+
+                    <div class="alert alert-warning mt-3" role="alert">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Permission Guidelines</h6>
+                        <ul class="mb-0">
+                            <li><strong>Principle of Least Privilege:</strong> Grant only the permissions users need</li>
+                            <li><strong>Regular Review:</strong> Periodically review and update user permissions</li>
+                            <li><strong>Inspection Approval:</strong> Only users with "Approve Inspections" permission can approve reports</li>
+                            <li><strong>Admin Access:</strong> Only users with "Admin Dashboard" permission can access admin features</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sample Data -->
+            <div class="card mb-4" id="sample-data">
+                <div class="card-header">
+                    <h4><i class="bi bi-database me-2"></i>9. Sample Data & Testing</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success" role="alert">
+                        <h6><i class="bi bi-check-circle"></i> Comprehensive Sample Data Available</h6>
+                        <p class="mb-0">The system comes pre-loaded with comprehensive sample data for testing and demonstration purposes.</p>
+                    </div>
+
+                    <h6>Sample Data Overview:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Users (4 accounts):</h6>
+                            <ul>
+                                <li><strong>admin:</strong> Full system access</li>
+                                <li><strong>fleet_manager:</strong> Sarah Johnson - Fleet management permissions</li>
+                                <li><strong>encoder_staff:</strong> Michael Brown - Data entry permissions</li>
+                                <li><strong>inspector:</strong> Lisa Wilson - Inspection permissions</li>
+                            </ul>
+                            
+                            <h6>Vehicles (20 vehicles):</h6>
+                            <ul>
+                                <li><strong>Serviceable:</strong> 8 vehicles ready for use</li>
+                                <li><strong>Under Repair:</strong> 11 vehicles being serviced</li>
+                                <li><strong>Unserviceable:</strong> 1 vehicle needing major repair</li>
+                                <li><strong>Brands:</strong> Toyota, Honda, Ford, Mitsubishi, Nissan, Isuzu, Hyundai, Suzuki, Chevrolet, Mazda</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Divisions (17 divisions):</h6>
+                            <ul>
+                                <li>Administrative Division</li>
+                                <li>Operations Division</li>
+                                <li>Environmental Management Division</li>
+                                <li>Forest Management Division</li>
+                                <li>Mining and Geosciences Division</li>
+                                <li>And more DENR divisions...</li>
+                            </ul>
+                            
+                            <h6>Drivers (13 drivers):</h6>
+                            <ul>
+                                <li>Complete with license numbers</li>
+                                <li>Contact information</li>
+                                <li>Email addresses</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>Repair Shops (14 shops):</h6>
+                            <ul>
+                                <li>AutoCare Plus</li>
+                                <li>Budget Repair Shop</li>
+                                <li>City Auto Works</li>
+                                <li>Express Service Center</li>
+                                <li>Premium Auto Service</li>
+                                <li>And more...</li>
+                            </ul>
+                            
+                            <h6>Repair Parts (139 parts):</h6>
+                            <ul>
+                                <li>Engine components</li>
+                                <li>Brake system parts</li>
+                                <li>Electrical components</li>
+                                <li>AC system parts</li>
+                                <li>Suspension components</li>
+                                <li>And many more...</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Repairs (36 repairs):</h6>
+                            <ul>
+                                <li>All ongoing repairs</li>
+                                <li>Linked to vehicles and repair shops</li>
+                                <li>Complete with parts and costs</li>
+                            </ul>
+                            
+                            <h6>PMS Records (26 records):</h6>
+                            <ul>
+                                <li>Scheduled maintenance</li>
+                                <li>Various service types</li>
+                                <li>Different statuses</li>
+                            </ul>
+                            
+                            <h6>Inspections (127 pre-inspections, 5 post-inspections):</h6>
+                            <ul>
+                                <li>Approved pre-inspections</li>
+                                <li>Linked to vehicles</li>
+                                <li>Ready for repair/PMS workflow</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h6>Testing the System:</h6>
+                    <ol>
+                        <li><strong>Login with sample accounts:</strong> Use the provided usernames and passwords</li>
+                        <li><strong>Test different permission levels:</strong> Each user has different access levels</li>
+                        <li><strong>Try the repair workflow:</strong> Use existing pre-inspections to create repairs</li>
+                        <li><strong>Test PMS process:</strong> Create PMS records with existing inspections</li>
+                        <li><strong>Explore vehicle management:</strong> View vehicles in different statuses</li>
+                        <li><strong>Test user management:</strong> Create new users with custom permissions</li>
+                    </ol>
+
+                    <div class="alert alert-info mt-3" role="alert">
+                        <h6><i class="bi bi-info-circle"></i> Sample Data Benefits</h6>
+                        <ul class="mb-0">
+                            <li><strong>Immediate Testing:</strong> No need to create data from scratch</li>
+                            <li><strong>Realistic Scenarios:</strong> Data reflects real-world usage</li>
+                            <li><strong>Complete Workflows:</strong> All processes can be tested end-to-end</li>
+                            <li><strong>Permission Testing:</strong> Different user roles demonstrate access control</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
             <!-- Troubleshooting -->
             <div class="card mb-4" id="troubleshooting">
                 <div class="card-header">
-                    <h4><i class="bi bi-tools me-2"></i>9. Troubleshooting</h4>
+                    <h4><i class="bi bi-tools me-2"></i>10. Troubleshooting</h4>
                 </div>
                 <div class="card-body">
                     <h6>Common Issues and Solutions:</h6>
@@ -675,9 +923,48 @@
                                     Cannot change vehicle status
                                 </button>
                             </h2>
-                            <div id="headingFour" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                            <div id="collapseFour" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
                                 <div class="accordion-body">
                                     <strong>Solution:</strong> Use the "Change Status" button on the vehicle detail page, not the edit form. Provide a reason for the status change.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingFive">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive">
+                                    Cannot access admin dashboard
+                                </button>
+                            </h2>
+                            <div id="collapseFive" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <strong>Solution:</strong> Only users with "Admin Dashboard" permission can access admin features. Contact an admin to grant this permission.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingSix">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSix">
+                                    Cannot approve inspection reports
+                                </button>
+                            </h2>
+                            <div id="collapseSix" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <strong>Solution:</strong> Only users with "Approve Inspections" permission can approve reports. Contact an admin to grant this permission.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingSeven">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSeven">
+                                    Cannot see certain menu items
+                                </button>
+                            </h2>
+                            <div id="collapseSeven" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <strong>Solution:</strong> Menu items are hidden based on user permissions. You need the appropriate "View" permission for each module to see it in the menu.
                                 </div>
                             </div>
                         </div>
@@ -688,7 +975,7 @@
             <!-- Best Practices -->
             <div class="card mb-4" id="best-practices">
                 <div class="card-header">
-                    <h4><i class="bi bi-star me-2"></i>10. Best Practices</h4>
+                    <h4><i class="bi bi-star me-2"></i>11. Best Practices</h4>
                 </div>
                 <div class="card-body">
                     <h6>Workflow Best Practices:</h6>
@@ -716,6 +1003,17 @@
                         <li><strong>Monitor notifications:</strong> Respond to alerts promptly</li>
                         <li><strong>Review reports:</strong> Use analytics to improve processes</li>
                         <li><strong>Keep system updated:</strong> Apply updates and patches</li>
+                    </ul>
+
+                    <h6>Permission Management Best Practices:</h6>
+                    <ul>
+                        <li><strong>Principle of Least Privilege:</strong> Grant only the minimum permissions needed</li>
+                        <li><strong>Regular Permission Reviews:</strong> Periodically audit user permissions</li>
+                        <li><strong>Role-Based Templates:</strong> Create permission templates for common roles</li>
+                        <li><strong>Document Permission Changes:</strong> Keep track of permission modifications</li>
+                        <li><strong>Test Permission Changes:</strong> Verify permissions work as expected</li>
+                        <li><strong>User Onboarding:</strong> Set up permissions during user creation</li>
+                        <li><strong>Offboarding Process:</strong> Remove or disable permissions when users leave</li>
                     </ul>
                 </div>
             </div>
