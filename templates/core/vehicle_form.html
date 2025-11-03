@@ -65,19 +65,25 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Division</label>
-                            {{ form.division }}
+                            <label class="form-label">Current Market Value</label>
+                            {{ form.current_market_value }}
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Assigned Driver</label>
-                            {{ form.assigned_driver }}
+                            <label class="form-label">Division</label>
+                            {{ form.division }}
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
+                            <label class="form-label">Assigned Driver</label>
+                            {{ form.assigned_driver }}
+                        </div>
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">Date Acquired</label>
                             {{ form.date_acquired }}
                         </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Current Mileage</label>
                             {{ form.current_mileage }}

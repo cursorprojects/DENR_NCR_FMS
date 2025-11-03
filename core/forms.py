@@ -12,7 +12,7 @@ class VehicleForm(forms.ModelForm):
         fields = [
             'plate_number', 'vehicle_type', 'model', 'brand', 'year',
             'engine_number', 'chassis_number', 'color', 'acquisition_cost',
-            'division', 'assigned_driver', 'status', 'date_acquired',
+            'current_market_value', 'division', 'assigned_driver', 'status', 'date_acquired',
             'current_mileage', 'rfid_number', 'rfid_type', 'fleet_card_number',
             'gas_station', 'photo', 'registration_document', 'notes'
         ]
@@ -26,6 +26,7 @@ class VehicleForm(forms.ModelForm):
             'chassis_number': forms.TextInput(attrs={'class': 'form-control'}),
             'color': forms.TextInput(attrs={'class': 'form-control'}),
             'acquisition_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'current_market_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'division': forms.Select(attrs={'class': 'form-control'}),
             'assigned_driver': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
@@ -191,7 +192,7 @@ class RepairForm(forms.ModelForm):
             if vehicle.status == 'For Disposal':
                 raise forms.ValidationError(
                     f"Cannot add repairs for vehicle {vehicle.plate_number} - Vehicle is marked FOR DISPOSAL. "
-                    "Repair costs have exceeded the disposal threshold (30% of half acquisition cost)."
+                    "Repair costs have exceeded the disposal threshold (half of current market value)."
                 )
             # Also check if vehicle would be in overuse condition
             if vehicle.is_for_disposal:
@@ -396,7 +397,7 @@ class PMSForm(forms.ModelForm):
             if vehicle.status == 'For Disposal':
                 raise forms.ValidationError(
                     f"Cannot add PMS for vehicle {vehicle.plate_number} - Vehicle is marked FOR DISPOSAL. "
-                    "Repair costs have exceeded the disposal threshold (30% of half acquisition cost)."
+                    "Repair costs have exceeded the disposal threshold (half of current market value)."
                 )
             # Also check if vehicle would be in overuse condition
             if vehicle.is_for_disposal:

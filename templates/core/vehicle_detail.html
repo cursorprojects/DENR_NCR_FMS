@@ -78,6 +78,9 @@
                         <strong>Acquisition Cost:</strong> {{ vehicle.acquisition_cost|currency|default:"-" }}
                     </div>
                     <div class="col-md-6 mb-2">
+                        <strong>Current Market Value:</strong> {{ vehicle.current_market_value|currency|default:"-" }}
+                    </div>
+                    <div class="col-md-6 mb-2">
                         <strong>Current Mileage:</strong> {{ vehicle.current_mileage|default:"0" }} km
                     </div>
                     <div class="col-md-6 mb-2">

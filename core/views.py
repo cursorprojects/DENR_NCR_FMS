@@ -156,7 +156,7 @@ def vehicle_list(request):
     
     # Check and mark vehicles for disposal based on repair costs
     for vehicle in vehicles:
-        if vehicle.acquisition_cost:  # Only check if acquisition cost is set
+        if vehicle.current_market_value:  # Only check if current market value is set
             vehicle.check_and_mark_for_disposal(user=request.user)
     
     divisions = Division.objects.all()
@@ -168,7 +168,7 @@ def vehicle_list(request):
         overuse_info = None
         disposal_percentage = None
         
-        if vehicle.acquisition_cost:
+        if vehicle.current_market_value:
             threshold = vehicle.disposal_threshold
             total_costs = vehicle.total_repair_costs
             if threshold and threshold > 0:

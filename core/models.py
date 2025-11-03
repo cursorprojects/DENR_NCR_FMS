@@ -206,6 +206,7 @@ class Vehicle(models.Model):
     chassis_number = models.CharField(max_length=100, blank=True, verbose_name='Chassis Number')
     color = models.CharField(max_length=50, blank=True, verbose_name='Color')
     acquisition_cost = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)], verbose_name='Acquisition Cost')
+    current_market_value = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)], verbose_name='Current Market Value')
     division = models.ForeignKey(Division, on_delete=models.SET_NULL, null=True, blank=True)
     assigned_driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Serviceable')
@@ -273,11 +274,10 @@ class Vehicle(models.Model):
     
     @property
     def disposal_threshold(self):
-        """Calculate the disposal threshold: 30% of (acquisition_cost / 2) = 15% of acquisition_cost"""
-        if not self.acquisition_cost or self.acquisition_cost <= 0:
+        """Calculate the disposal threshold: current_market_value / 2"""
+        if not self.current_market_value or self.current_market_value <= 0:
             return None
-        x = self.acquisition_cost / Decimal('2')
-        threshold = x * Decimal('0.30')  # 30% of x
+        threshold = self.current_market_value / Decimal('2')
         return threshold
     
     @property
@@ -302,7 +302,7 @@ class Vehicle(models.Model):
         
         # Mark for disposal if costs exceed threshold
         if is_for_disposal and self.status != 'For Disposal':
-            reason = f'Vehicle marked for disposal: Total repair costs ({total_costs:.2f}) exceed 30% of half acquisition cost (threshold: {threshold:.2f})'
+            reason = f'Vehicle marked for disposal: Total repair costs ({total_costs:.2f}) exceed half of current market value (threshold: {threshold:.2f})'
             self.update_status('For Disposal', user=user, reason=reason, auto_update=True)
             return True
         
@@ -432,7 +432,7 @@ class Repair(models.Model):
             if old_cost != current_cost or self.status != 'Completed':
                 should_recheck_disposal = True
         
-        if should_recheck_disposal and self.vehicle.acquisition_cost:
+        if should_recheck_disposal and self.vehicle.current_market_value:
             # Refresh vehicle from DB to get latest repair costs
             self.vehicle.refresh_from_db()
             self.vehicle.check_and_mark_for_disposal(user=None)
@@ -450,7 +450,7 @@ class Repair(models.Model):
                     )
         elif old_status == 'Completed' and self.status != 'Completed':
             # Repair was un-completed, recheck disposal status as costs have decreased
-            if self.vehicle.acquisition_cost:
+            if self.vehicle.current_market_value:
                 self.vehicle.refresh_from_db()
                 self.vehicle.check_and_mark_for_disposal(user=None)
         
