@@ -309,7 +309,6 @@ class Command(BaseCommand):
         ]
         
         colors = ['White', 'Black', 'Silver', 'Blue', 'Red', 'Gray', 'Green', 'Brown', 'Beige']
-        rfid_types = ['Autosweep', 'Easytrip']
         gas_stations = ['Shell', 'Petron', 'Caltex', 'Total', 'Unioil', 'Seaoil']
         status_reasons = [
             'Regular operational status',
@@ -340,8 +339,8 @@ class Command(BaseCommand):
                     'engine_number': f'ENG-{random.randint(100000, 999999)}',
                     'chassis_number': f'CHS-{random.randint(100000, 999999)}',
                     'color': random.choice(colors),
-                    'rfid_number': f'RFID-{random.randint(100000, 999999)}' if random.random() > 0.2 else '',
-                    'rfid_type': random.choice(rfid_types) if random.random() > 0.3 else None,
+                    'rfid_autosweep_number': f'ASW-{random.randint(100000, 999999)}' if random.random() > 0.3 else '',
+                    'rfid_easytrip_number': f'ETR-{random.randint(100000, 999999)}' if random.random() > 0.3 else '',
                     'fleet_card_number': f'FC-{random.randint(100000, 999999)}' if random.random() > 0.2 else '',
                     'gas_station': random.choice(gas_stations) if random.random() > 0.2 else '',
                     'notes': f'Vehicle notes for {plate}. Status: {status}.',

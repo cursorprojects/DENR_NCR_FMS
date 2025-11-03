@@ -93,14 +93,14 @@
                 <hr>
                 <h6 class="mb-3">RFID & Fleet Card Information</h6>
                 <div class="row">
-                    {% if vehicle.rfid_number %}
+                    {% if vehicle.rfid_autosweep_number %}
                     <div class="col-md-6 mb-2">
-                        <strong>RFID Number:</strong> {{ vehicle.rfid_number }}
+                        <strong>Autosweep RFID Number:</strong> {{ vehicle.rfid_autosweep_number }}
                     </div>
                     {% endif %}
-                    {% if vehicle.rfid_type %}
+                    {% if vehicle.rfid_easytrip_number %}
                     <div class="col-md-6 mb-2">
-                        <strong>RFID Type:</strong> {{ vehicle.get_rfid_type_display }}
+                        <strong>Easytrip RFID Number:</strong> {{ vehicle.rfid_easytrip_number }}
                     </div>
                     {% endif %}
                     {% if vehicle.fleet_card_number %}

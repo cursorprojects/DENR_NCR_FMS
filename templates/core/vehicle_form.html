@@ -95,18 +95,18 @@
                         <!-- RFID Column -->
                         <div class="col-md-6">
                             <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="has_rfid_checkbox" {% if form.rfid_number.value %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" id="has_rfid_checkbox" {% if form.rfid_autosweep_number.value or form.rfid_easytrip_number.value %}checked{% endif %}>
                                 <label class="form-check-label" for="has_rfid_checkbox">
                                     Has RFID
                                 </label>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">RFID Number</label>
-                                {{ form.rfid_number }}
+                                <label class="form-label">Autosweep RFID Number</label>
+                                {{ form.rfid_autosweep_number }}
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">RFID Type</label>
-                                {{ form.rfid_type }}
+                                <label class="form-label">Easytrip RFID Number</label>
+                                {{ form.rfid_easytrip_number }}
                             </div>
                         </div>
                         
@@ -160,21 +160,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasFleetCardCheckbox = document.getElementById('has_fleet_card_checkbox');
     
     // Get the input fields
-    const rfidNumberInput = document.getElementById('id_rfid_number');
-    const rfidTypeInput = document.getElementById('id_rfid_type');
+    const rfidAutosweepInput = document.getElementById('id_rfid_autosweep_number');
+    const rfidEasytripInput = document.getElementById('id_rfid_easytrip_number');
     const fleetCardNumberInput = document.getElementById('id_fleet_card_number');
     const gasStationInput = document.getElementById('id_gas_station');
     
     // Function to toggle RFID fields
     function toggleRfidFields() {
         if (hasRfidCheckbox.checked) {
-            rfidNumberInput.disabled = false;
-            rfidTypeInput.disabled = false;
+            rfidAutosweepInput.disabled = false;
+            rfidEasytripInput.disabled = false;
         } else {
-            rfidNumberInput.disabled = true;
-            rfidNumberInput.value = '';
-            rfidTypeInput.disabled = true;
-            rfidTypeInput.value = '';
+            rfidAutosweepInput.disabled = true;
+            rfidAutosweepInput.value = '';
+            rfidEasytripInput.disabled = true;
+            rfidEasytripInput.value = '';
         }
     }
     
@@ -191,8 +191,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Initial state
-    toggleRfidFields();
+    // Initial state - check if RFID fields should be enabled
+    if (rfidAutosweepInput.value || rfidEasytripInput.value) {
+        hasRfidCheckbox.checked = true;
+        toggleRfidFields();
+    } else {
+        toggleRfidFields();
+    }
     toggleFleetCardFields();
     
     // Add event listeners
@@ -201,8 +206,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Before form submission, re-enable disabled fields so they submit
     document.querySelector('form').addEventListener('submit', function() {
-        rfidNumberInput.disabled = false;
-        rfidTypeInput.disabled = false;
+        rfidAutosweepInput.disabled = false;
+        rfidEasytripInput.disabled = false;
         fleetCardNumberInput.disabled = false;
         gasStationInput.disabled = false;
     });

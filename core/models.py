@@ -181,11 +181,6 @@ class Vehicle(models.Model):
         ('For Disposal', 'For Disposal'),
     ]
     
-    RFID_TYPE_CHOICES = [
-        ('Autosweep', 'Autosweep'),
-        ('Easytrip', 'Easytrip'),
-    ]
-    
     VEHICLE_TYPE_CHOICES = [
         ('SEDAN', 'SEDAN'),
         ('SUV', 'SUV'),
@@ -218,8 +213,8 @@ class Vehicle(models.Model):
     photo = models.ImageField(upload_to='vehicles/', blank=True, null=True)
     registration_document = models.FileField(upload_to='documents/', blank=True, null=True)
     # RFID and Fleet Card Information
-    rfid_number = models.CharField(max_length=100, blank=True, verbose_name='RFID Number')
-    rfid_type = models.CharField(max_length=20, choices=RFID_TYPE_CHOICES, blank=True, null=True, verbose_name='RFID Type')
+    rfid_autosweep_number = models.CharField(max_length=100, blank=True, verbose_name='Autosweep RFID Number')
+    rfid_easytrip_number = models.CharField(max_length=100, blank=True, verbose_name='Easytrip RFID Number')
     fleet_card_number = models.CharField(max_length=100, blank=True, verbose_name='Fleet Card Number')
     gas_station = models.CharField(max_length=200, blank=True, verbose_name='Gas Station')
     notes = models.TextField(blank=True)

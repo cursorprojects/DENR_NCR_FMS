@@ -13,7 +13,7 @@ class VehicleForm(forms.ModelForm):
             'plate_number', 'vehicle_type', 'model', 'brand', 'year',
             'engine_number', 'chassis_number', 'color', 'acquisition_cost',
             'current_market_value', 'division', 'assigned_driver', 'status', 'date_acquired',
-            'current_mileage', 'rfid_number', 'rfid_type', 'fleet_card_number',
+            'current_mileage', 'rfid_autosweep_number', 'rfid_easytrip_number', 'fleet_card_number',
             'gas_station', 'photo', 'registration_document', 'notes'
         ]
         widgets = {
@@ -32,8 +32,8 @@ class VehicleForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-control'}),
             'date_acquired': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'current_mileage': forms.NumberInput(attrs={'class': 'form-control'}),
-            'rfid_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'rfid_type': forms.Select(attrs={'class': 'form-control'}),
+            'rfid_autosweep_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'rfid_easytrip_number': forms.TextInput(attrs={'class': 'form-control'}),
             'fleet_card_number': forms.TextInput(attrs={'class': 'form-control'}),
             'gas_station': forms.TextInput(attrs={'class': 'form-control'}),
             'photo': forms.FileInput(attrs={'class': 'form-control'}),
