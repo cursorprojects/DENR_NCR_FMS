@@ -521,8 +521,8 @@ class UserForm(forms.ModelForm):
             'can_view_inspections', 'can_add_inspections', 'can_edit_inspections', 'can_delete_inspections', 'can_approve_inspections',
             # User Management Permissions
             'can_view_users', 'can_add_users', 'can_edit_users', 'can_delete_users',
-            # Department Management Permissions
-            'can_view_departments', 'can_add_departments', 'can_edit_departments', 'can_delete_departments',
+            # Division Management Permissions
+            'can_view_divisions', 'can_add_divisions', 'can_edit_divisions', 'can_delete_divisions',
             # Driver Management Permissions
             'can_view_drivers', 'can_add_drivers', 'can_edit_drivers', 'can_delete_drivers',
             # Repair Shop Management Permissions

@@ -50,11 +50,11 @@ class CustomUser(AbstractUser):
     can_edit_users = models.BooleanField(default=False)
     can_delete_users = models.BooleanField(default=False)
     
-    # Department Management Permissions
-    can_view_departments = models.BooleanField(default=False)
-    can_add_departments = models.BooleanField(default=False)
-    can_edit_departments = models.BooleanField(default=False)
-    can_delete_departments = models.BooleanField(default=False)
+    # Division Management Permissions
+    can_view_divisions = models.BooleanField(default=False)
+    can_add_divisions = models.BooleanField(default=False)
+    can_edit_divisions = models.BooleanField(default=False)
+    can_delete_divisions = models.BooleanField(default=False)
     
     # Driver Management Permissions
     can_view_drivers = models.BooleanField(default=False)

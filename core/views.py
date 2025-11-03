@@ -756,70 +756,70 @@ def admin_dashboard(request):
     return render(request, 'core/cms/admin_dashboard.html', context)
 
 
-# Department Management Views
+# Division Management Views
 @login_required
-def department_list(request):
+def division_list(request):
     if not request.user.has_admin_access():
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('dashboard')
     
-    departments = Department.objects.all()
+    divisions = Division.objects.all()
     
     # Filtering
     search_query = request.GET.get('search', '')
     if search_query:
-        departments = departments.filter(
+        divisions = divisions.filter(
             Q(name__icontains=search_query) |
             Q(description__icontains=search_query)
         )
     
     context = {
-        'departments': departments,
+        'divisions': divisions,
         'search_query': search_query,
     }
     
-    return render(request, 'core/cms/department_list.html', context)
+    return render(request, 'core/cms/division_list.html', context)
 
 
 @login_required
-def department_create(request):
+def division_create(request):
     if not request.user.has_admin_access():
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('dashboard')
     
     if request.method == 'POST':
-        form = DepartmentForm(request.POST)
+        form = DivisionForm(request.POST)
         if form.is_valid():
-            department = form.save()
+            division = form.save()
             
             # Log activity
             ActivityLog.objects.create(
                 user=request.user,
                 action='create',
-                model_name='Department',
-                object_id=department.id,
-                description=f'Created department {department.name}',
+                model_name='Division',
+                object_id=division.id,
+                description=f'Created division {division.name}',
                 ip_address=request.META.get('REMOTE_ADDR')
             )
             
-            messages.success(request, 'Department created successfully!')
-            return redirect('department_list')
+            messages.success(request, 'Division created successfully!')
+            return redirect('division_list')
     else:
-        form = DepartmentForm()
+        form = DivisionForm()
     
-    return render(request, 'core/cms/department_form.html', {'form': form, 'title': 'Add Department'})
+    return render(request, 'core/cms/division_form.html', {'form': form, 'title': 'Add Division'})
 
 
 @login_required
-def department_edit(request, pk):
+def division_edit(request, pk):
     if not request.user.has_admin_access():
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('dashboard')
     
-    department = get_object_or_404(Department, pk=pk)
+    division = get_object_or_404(Division, pk=pk)
     
     if request.method == 'POST':
-        form = DepartmentForm(request.POST, instance=department)
+        form = DivisionForm(request.POST, instance=division)
         if form.is_valid():
             form.save()
             
@@ -827,44 +827,44 @@ def department_edit(request, pk):
             ActivityLog.objects.create(
                 user=request.user,
                 action='update',
-                model_name='Department',
-                object_id=department.id,
-                description=f'Updated department {department.name}',
+                model_name='Division',
+                object_id=division.id,
+                description=f'Updated division {division.name}',
                 ip_address=request.META.get('REMOTE_ADDR')
             )
             
-            messages.success(request, 'Department updated successfully!')
-            return redirect('department_list')
+            messages.success(request, 'Division updated successfully!')
+            return redirect('division_list')
     else:
-        form = DepartmentForm(instance=department)
+        form = DivisionForm(instance=division)
     
-    return render(request, 'core/cms/department_form.html', {'form': form, 'title': 'Edit Department'})
+    return render(request, 'core/cms/division_form.html', {'form': form, 'title': 'Edit Division'})
 
 
 @login_required
-def department_delete(request, pk):
+def division_delete(request, pk):
     if not request.user.has_admin_access():
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('dashboard')
     
-    department = get_object_or_404(Department, pk=pk)
+    division = get_object_or_404(Division, pk=pk)
     
     if request.method == 'POST':
         # Log activity
         ActivityLog.objects.create(
             user=request.user,
             action='delete',
-            model_name='Department',
-            object_id=department.id,
-            description=f'Deleted department {department.name}',
+            model_name='Division',
+            object_id=division.id,
+            description=f'Deleted division {division.name}',
             ip_address=request.META.get('REMOTE_ADDR')
         )
         
-        department.delete()
-        messages.success(request, 'Department deleted successfully!')
-        return redirect('department_list')
+        division.delete()
+        messages.success(request, 'Division deleted successfully!')
+        return redirect('division_list')
     
-    return render(request, 'core/cms/department_delete.html', {'department': department})
+    return render(request, 'core/cms/division_delete.html', {'division': division})
 
 
 # Driver Management Views

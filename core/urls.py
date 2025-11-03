@@ -17,11 +17,11 @@ urlpatterns = [
     path('users/<int:pk>/delete/', views.user_delete, name='user_delete'),
     path('activity-logs/', views.activity_logs, name='activity_logs'),
     
-    # Department Management URLs
-    path('departments/', views.department_list, name='department_list'),
-    path('departments/add/', views.department_create, name='department_create'),
-    path('departments/<int:pk>/edit/', views.department_edit, name='department_edit'),
-    path('departments/<int:pk>/delete/', views.department_delete, name='department_delete'),
+    # Division Management URLs
+    path('divisions/', views.division_list, name='division_list'),
+    path('divisions/add/', views.division_create, name='division_create'),
+    path('divisions/<int:pk>/edit/', views.division_edit, name='division_edit'),
+    path('divisions/<int:pk>/delete/', views.division_delete, name='division_delete'),
     
     # Driver Management URLs
     path('drivers/', views.driver_list, name='driver_list'),

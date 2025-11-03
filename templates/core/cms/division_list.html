@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Department Management{% endblock %}
+{% block title %}Division Management{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="bi bi-building me-2"></i>Department Management</h2>
-                <a href="{% url 'department_create' %}" class="btn btn-primary">
-                    <i class="bi bi-plus me-2"></i>Add New Department
+                <h2><i class="bi bi-building me-2"></i>Division Management</h2>
+                <a href="{% url 'division_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus me-2"></i>Add New Division
                 </a>
             </div>
             
@@ -21,7 +21,7 @@
                         <div class="col-md-6">
                             <label for="search" class="form-label">Search</label>
                             <input type="text" class="form-control" id="search" name="search" 
-                                   value="{{ search_query }}" placeholder="Search departments...">
+                                   value="{{ search_query }}" placeholder="Search divisions...">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">&nbsp;</label>
@@ -34,7 +34,7 @@
                         <div class="col-md-3">
                             <label class="form-label">&nbsp;</label>
                             <div class="d-grid">
-                                <a href="{% url 'department_list' %}" class="btn btn-outline-secondary">
+                                <a href="{% url 'division_list' %}" class="btn btn-outline-secondary">
                                     <i class="bi bi-arrow-clockwise me-2"></i>Reset
                                 </a>
                             </div>
@@ -43,7 +43,7 @@
                 </div>
             </div>
             
-            <!-- Departments Table -->
+            <!-- Divisions Table -->
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
@@ -56,29 +56,29 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for department in departments %}
+                                {% for division in divisions %}
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                                                {{ department.name|first|upper }}
+                                                {{ division.name|first|upper }}
                                             </div>
-                                            <strong>{{ department.name }}</strong>
+                                            <strong>{{ division.name }}</strong>
                                         </div>
                                     </td>
                                     <td>
-                                        {% if department.description %}
-                                            {{ department.description|truncatewords:10 }}
+                                        {% if division.description %}
+                                            {{ division.description|truncatewords:10 }}
                                         {% else %}
                                             <span class="text-muted">No description</span>
                                         {% endif %}
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="{% url 'department_edit' department.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <a href="{% url 'division_edit' division.pk %}" class="btn btn-sm btn-outline-primary">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-                                            <a href="{% url 'department_delete' department.pk %}" class="btn btn-sm btn-outline-danger">
+                                            <a href="{% url 'division_delete' division.pk %}" class="btn btn-sm btn-outline-danger">
                                                 <i class="bi bi-trash"></i>
                                             </a>
                                         </div>
@@ -88,9 +88,9 @@
                                 <tr>
                                     <td colspan="3" class="text-center text-muted py-4">
                                         <i class="bi bi-building fa-3x mb-3"></i>
-                                        <p>No departments found</p>
-                                        <a href="{% url 'department_create' %}" class="btn btn-primary">
-                                            <i class="bi bi-plus me-2"></i>Add First Department
+                                        <p>No divisions found</p>
+                                        <a href="{% url 'division_create' %}" class="btn btn-primary">
+                                            <i class="bi bi-plus me-2"></i>Add First Division
                                         </a>
                                     </td>
                                 </tr>

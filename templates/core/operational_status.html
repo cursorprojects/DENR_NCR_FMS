@@ -21,7 +21,7 @@
                             <span class="badge bg-success">Serviceable</span>
                         </div>
                         <p class="mb-1">{{ vehicle.brand }} {{ vehicle.model }}</p>
-                        <small>{{ vehicle.department|default:"No Department" }}</small>
+                        <small>{{ vehicle.division|default:"No Division" }}</small>
                     </a>
                     {% empty %}
                     <p class="text-center text-muted">No operational vehicles</p>
@@ -44,7 +44,7 @@
                             <span class="badge bg-secondary">Unserviceable</span>
                         </div>
                         <p class="mb-1">{{ vehicle.brand }} {{ vehicle.model }}</p>
-                        <small>{{ vehicle.department|default:"No Department" }}</small>
+                        <small>{{ vehicle.division|default:"No Division" }}</small>
                     </a>
                     {% empty %}
                     <p class="text-center text-muted">No non-operational vehicles</p>
@@ -67,7 +67,7 @@
                             <span class="badge bg-warning text-dark">Under Repair</span>
                         </div>
                         <p class="mb-1">{{ vehicle.brand }} {{ vehicle.model }}</p>
-                        <small>{{ vehicle.department|default:"No Department" }}</small>
+                        <small>{{ vehicle.division|default:"No Division" }}</small>
                     </a>
                     {% empty %}
                     <p class="text-center text-muted">No vehicles under repair</p>
