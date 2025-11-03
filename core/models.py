@@ -289,13 +289,32 @@ class Vehicle(models.Model):
         return self.total_repair_costs >= threshold
     
     def check_and_mark_for_disposal(self, user=None):
-        """Check if vehicle exceeds threshold and automatically mark for disposal if needed"""
-        if self.is_for_disposal and self.status != 'For Disposal':
-            threshold = self.disposal_threshold
-            total_costs = self.total_repair_costs
+        """Check if vehicle exceeds threshold and automatically mark/unmark for disposal if needed"""
+        # Refresh from DB to get latest repair costs
+        self.refresh_from_db()
+        
+        threshold = self.disposal_threshold
+        if threshold is None:
+            return False
+        
+        total_costs = self.total_repair_costs
+        is_for_disposal = total_costs >= threshold
+        
+        # Mark for disposal if costs exceed threshold
+        if is_for_disposal and self.status != 'For Disposal':
             reason = f'Vehicle marked for disposal: Total repair costs ({total_costs:.2f}) exceed 30% of half acquisition cost (threshold: {threshold:.2f})'
             self.update_status('For Disposal', user=user, reason=reason, auto_update=True)
             return True
+        
+        # Unmark from disposal if costs drop below threshold
+        if not is_for_disposal and self.status == 'For Disposal':
+            # Check if vehicle has ongoing repairs
+            ongoing_repairs = self.repairs.filter(status='Ongoing').exists()
+            new_status = 'Under Repair' if ongoing_repairs else 'Serviceable'
+            reason = f'Vehicle unmarked from disposal: Total repair costs ({total_costs:.2f}) are below threshold ({threshold:.2f})'
+            self.update_status(new_status, user=user, reason=reason, auto_update=True)
+            return True
+        
         return False
     
     class Meta:
@@ -397,15 +416,28 @@ class Repair(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Check if vehicle should be marked for disposal
+        # Check if vehicle should be marked/unmarked for disposal
         # This happens when:
         # 1. A repair is marked as Completed
         # 2. A completed repair's cost is updated
+        # 3. A repair is changed from Completed to Ongoing (reduces total costs)
+        should_recheck_disposal = False
+        current_cost = self.total_cost
+        
         if self.status == 'Completed':
+            # Always recheck when repair is completed or cost changes
+            should_recheck_disposal = True
+        elif old_status == 'Completed':
+            # Repair was completed before - check if cost changed or status changed to Ongoing
+            if old_cost != current_cost or self.status != 'Completed':
+                should_recheck_disposal = True
+        
+        if should_recheck_disposal and self.vehicle.acquisition_cost:
             # Refresh vehicle from DB to get latest repair costs
             self.vehicle.refresh_from_db()
             self.vehicle.check_and_mark_for_disposal(user=None)
-            
+        
+        if self.status == 'Completed':
             # Check if there are any other ongoing repairs for this vehicle
             ongoing_repairs = self.vehicle.repairs.filter(status='Ongoing').exclude(id=self.id)
             if not ongoing_repairs.exists() and self.vehicle.status == 'Under Repair':
@@ -417,11 +449,10 @@ class Repair(models.Model):
                         auto_update=True
                     )
         elif old_status == 'Completed' and self.status != 'Completed':
-            # Repair was un-completed, check if vehicle should still be for disposal
-            self.vehicle.refresh_from_db()
-            # Don't automatically unmark, but check threshold
-            # Vehicle can only be unmarked manually by admin
-            pass
+            # Repair was un-completed, recheck disposal status as costs have decreased
+            if self.vehicle.acquisition_cost:
+                self.vehicle.refresh_from_db()
+                self.vehicle.check_and_mark_for_disposal(user=None)
         
         elif self.status == 'Ongoing' and self.vehicle.status == 'Serviceable':
             # Set vehicle to under repair when repair starts

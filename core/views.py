@@ -396,7 +396,12 @@ def repair_edit(request, pk):
 def repair_delete(request, pk):
     repair = get_object_or_404(Repair, pk=pk)
     if request.method == 'POST':
+        vehicle = repair.vehicle
         repair.delete()
+        # Recheck disposal status after repair deletion
+        if vehicle.acquisition_cost:
+            vehicle.refresh_from_db()
+            vehicle.check_and_mark_for_disposal(user=request.user)
         messages.success(request, 'Repair record deleted successfully!')
         return redirect('repair_list')
     return render(request, 'core/repair_delete.html', {'repair': repair})
