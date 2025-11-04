@@ -43,13 +43,8 @@
                                         {{ user_obj.email }}
                                     </div>
                                     <div class="col-md-6">
-                                        <strong>Role:</strong><br>
-                                        <span class="badge 
-                                            {% if user_obj.role == 'super_admin' %}bg-danger
-                                            {% elif user_obj.role == 'fleet_manager' %}bg-warning
-                                            {% else %}bg-info{% endif %}">
-                                            {{ user_obj.get_role_display }}
-                                        </span>
+                                        <strong>Permissions:</strong><br>
+                                        <small class="text-muted">{{ user_obj.get_permission_summary }}</small>
                                     </div>
                                 </div>
                                 

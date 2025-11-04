@@ -612,7 +612,7 @@ def user_create(request):
                 action='create',
                 model_name='User',
                 object_id=user.id,
-                description=f'Created user {user.get_full_name()} with role {user.get_role_display()}',
+                description=f'Created user {user.get_full_name()}',
                 ip_address=request.META.get('REMOTE_ADDR')
             )
             
