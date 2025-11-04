@@ -25,49 +25,109 @@
         </div>
         <div class="col-md-3 mb-3">
             <div class="card text-white bg-primary h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_list' %}'">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Total Vehicles</h6>
-                        <h2 class="mb-0">{{ total_vehicles }}</h2>
-                        <small>Click to manage vehicles</small>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title">Total Vehicles</h6>
+                            <h2 class="mb-0">{{ total_vehicles }}</h2>
+                            <small>Click to manage vehicles</small>
+                        </div>
+                        <i class="bi bi-truck" style="font-size: 3rem; opacity: 0.7;"></i>
                     </div>
-                    <i class="bi bi-truck" style="font-size: 3rem; opacity: 0.7;"></i>
+                    {% if total_type_breakdown %}
+                    <div class="mt-3 pt-3 border-top border-white border-opacity-25">
+                        <small class="d-block mb-2"><strong>By Type:</strong></small>
+                        <div class="total-breakdown">
+                            {% for vehicle_type, count in total_type_breakdown.items %}
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">{{ vehicle_type }}:</span>
+                                <span class="badge bg-light text-dark">{{ count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
             <div class="card text-white bg-success h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_list' %}?status=Serviceable'">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Serviceable</h6>
-                        <h2 class="mb-0">{{ operational }}</h2>
-                        <small>Ready for use</small>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title">Serviceable</h6>
+                            <h2 class="mb-0">{{ operational }}</h2>
+                            <small>Ready for use</small>
+                        </div>
+                        <i class="bi bi-check-circle" style="font-size: 3rem; opacity: 0.7;"></i>
                     </div>
-                    <i class="bi bi-check-circle" style="font-size: 3rem; opacity: 0.7;"></i>
+                    {% if serviceable_type_breakdown %}
+                    <div class="mt-3 pt-3 border-top border-white border-opacity-25">
+                        <small class="d-block mb-2"><strong>By Type:</strong></small>
+                        <div class="serviceable-breakdown">
+                            {% for vehicle_type, count in serviceable_type_breakdown.items %}
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">{{ vehicle_type }}:</span>
+                                <span class="badge bg-light text-dark">{{ count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
             <div class="card text-white bg-warning h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_list' %}?status=Under Repair'">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Under Repair</h6>
-                        <h2 class="mb-0">{{ under_repair }}</h2>
-                        <small>Currently being repaired</small>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title">Under Repair</h6>
+                            <h2 class="mb-0">{{ under_repair }}</h2>
+                            <small>Currently being repaired</small>
+                        </div>
+                        <i class="bi bi-tools" style="font-size: 3rem; opacity: 0.7;"></i>
                     </div>
-                    <i class="bi bi-tools" style="font-size: 3rem; opacity: 0.7;"></i>
+                    {% if under_repair_type_breakdown %}
+                    <div class="mt-3 pt-3 border-top border-white border-opacity-25">
+                        <small class="d-block mb-2"><strong>By Type:</strong></small>
+                        <div class="under-repair-breakdown">
+                            {% for vehicle_type, count in under_repair_type_breakdown.items %}
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">{{ vehicle_type }}:</span>
+                                <span class="badge bg-light text-dark">{{ count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
             <div class="card text-white bg-danger h-100 clickable-card" onclick="window.location.href='{% url 'vehicle_list' %}?status=Unserviceable'">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Unserviceable</h6>
-                        <h2 class="mb-0">{{ non_operational }}</h2>
-                        <small>Out of service</small>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title">Unserviceable</h6>
+                            <h2 class="mb-0">{{ non_operational }}</h2>
+                            <small>Out of service</small>
+                        </div>
+                        <i class="bi bi-x-circle" style="font-size: 3rem; opacity: 0.7;"></i>
                     </div>
-                    <i class="bi bi-x-circle" style="font-size: 3rem; opacity: 0.7;"></i>
+                    {% if non_operational_type_breakdown %}
+                    <div class="mt-3 pt-3 border-top border-white border-opacity-25">
+                        <small class="d-block mb-2"><strong>By Type:</strong></small>
+                        <div class="non-operational-breakdown">
+                            {% for vehicle_type, count in non_operational_type_breakdown.items %}
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">{{ vehicle_type }}:</span>
+                                <span class="badge bg-light text-dark">{{ count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

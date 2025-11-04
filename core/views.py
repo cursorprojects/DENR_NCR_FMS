@@ -29,6 +29,19 @@ def dashboard(request):
     under_repair = Vehicle.objects.filter(status='Under Repair').count()
     non_operational = Vehicle.objects.filter(status='Unserviceable').count()
     
+    # Vehicles breakdown by type for all statuses
+    total_by_type = Vehicle.objects.values('vehicle_type').annotate(count=Count('id')).order_by('-count')
+    total_type_breakdown = {item['vehicle_type']: item['count'] for item in total_by_type}
+    
+    serviceable_by_type = Vehicle.objects.filter(status='Serviceable').values('vehicle_type').annotate(count=Count('id')).order_by('-count')
+    serviceable_type_breakdown = {item['vehicle_type']: item['count'] for item in serviceable_by_type}
+    
+    under_repair_by_type = Vehicle.objects.filter(status='Under Repair').values('vehicle_type').annotate(count=Count('id')).order_by('-count')
+    under_repair_type_breakdown = {item['vehicle_type']: item['count'] for item in under_repair_by_type}
+    
+    non_operational_by_type = Vehicle.objects.filter(status='Unserviceable').values('vehicle_type').annotate(count=Count('id')).order_by('-count')
+    non_operational_type_breakdown = {item['vehicle_type']: item['count'] for item in non_operational_by_type}
+    
     # Repair costs
     current_month = timezone.now().month
     current_year = timezone.now().year
@@ -125,6 +138,10 @@ def dashboard(request):
         'operational': operational,
         'under_repair': under_repair,
         'non_operational': non_operational,
+        'total_type_breakdown': total_type_breakdown,
+        'serviceable_type_breakdown': serviceable_type_breakdown,
+        'under_repair_type_breakdown': under_repair_type_breakdown,
+        'non_operational_type_breakdown': non_operational_type_breakdown,
         'monthly_cost': monthly_cost,
         'yearly_cost': yearly_cost,
         'recent_repairs': recent_repairs,
@@ -1634,6 +1651,13 @@ def post_inspection_create(request):
                     repair.save()
                 except Repair.DoesNotExist:
                     pass
+                except Exception as e:
+                    # Handle validation errors gracefully
+                    from django.core.exceptions import ValidationError
+                    if isinstance(e, ValidationError):
+                        messages.error(request, str(e))
+                    else:
+                        messages.error(request, f'Error linking post-inspection to repair: {str(e)}')
             
             # If pms_id is provided in POST, link the report to the PMS
             pms_id = request.POST.get('pms_id')
@@ -1644,6 +1668,13 @@ def post_inspection_create(request):
                     pms.save()
                 except PMS.DoesNotExist:
                     pass
+                except Exception as e:
+                    # Handle validation errors gracefully
+                    from django.core.exceptions import ValidationError
+                    if isinstance(e, ValidationError):
+                        messages.error(request, str(e))
+                    else:
+                        messages.error(request, f'Error linking post-inspection to PMS: {str(e)}')
             
             # Log activity
             ActivityLog.objects.create(

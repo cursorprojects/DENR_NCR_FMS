@@ -432,17 +432,26 @@ class Repair(models.Model):
             self.vehicle.refresh_from_db()
             self.vehicle.check_and_mark_for_disposal(user=None)
         
-        if self.status == 'Completed':
-            # Check if there are any other ongoing repairs for this vehicle
-            ongoing_repairs = self.vehicle.repairs.filter(status='Ongoing').exclude(id=self.id)
-            if not ongoing_repairs.exists() and self.vehicle.status == 'Under Repair':
-                # No more ongoing repairs, but only set to serviceable if not marked for disposal
-                if self.vehicle.status != 'For Disposal':
-                    self.vehicle.update_status(
-                        'Serviceable', 
-                        reason=f'All repairs completed for vehicle {self.vehicle.plate_number}',
-                        auto_update=True
-                    )
+        # Check if status changed to Completed
+        if self.status == 'Completed' and old_status != 'Completed':
+            # Refresh vehicle from DB to get current status
+            self.vehicle.refresh_from_db()
+            
+            # Check if there are any other ongoing repairs or PMS for this vehicle
+            ongoing_repairs = self.vehicle.repairs.filter(status='Ongoing').exclude(id=self.id).exists()
+            ongoing_pms = self.vehicle.pms_records.filter(status='In Progress').exists()
+            
+            # Only set to serviceable if:
+            # 1. No ongoing repairs or PMS
+            # 2. Vehicle is not marked for disposal
+            # 3. Vehicle is currently Under Repair or Unserviceable (could be set to serviceable)
+            if not ongoing_repairs and not ongoing_pms and self.vehicle.status != 'For Disposal':
+                # Set vehicle to serviceable when all maintenance is completed
+                self.vehicle.update_status(
+                    'Serviceable', 
+                    reason=f'Repair completed for vehicle {self.vehicle.plate_number}',
+                    auto_update=True
+                )
         elif old_status == 'Completed' and self.status != 'Completed':
             # Repair was un-completed, recheck disposal status as costs have decreased
             if self.vehicle.current_market_value:
@@ -482,8 +491,8 @@ class Repair(models.Model):
                 "Please approve the pre-inspection report first."
             )
         
-        # Rule 4: Post-inspection must be approved if provided
-        if self.post_inspection and not self.post_inspection.is_approved:
+        # Rule 4: Post-inspection must be approved only when marking repair as completed
+        if self.status == 'Completed' and self.post_inspection and not self.post_inspection.is_approved:
             raise ValidationError(
                 "The post-inspection report must be approved before marking repair as completed. "
                 "Please approve the post-inspection report first."
@@ -892,6 +901,15 @@ class PMS(models.Model):
         # Enforce business rules
         self._validate_inspection_requirements()
         
+        # Store old status to check if status changed
+        old_status = None
+        if self.pk:
+            try:
+                old_pms = self.__class__.objects.get(pk=self.pk)
+                old_status = old_pms.status
+            except self.__class__.DoesNotExist:
+                pass
+        
         super().save(*args, **kwargs)
         
         # Auto-update vehicle status based on PMS status
@@ -903,13 +921,21 @@ class PMS(models.Model):
                 auto_update=True
             )
         
-        elif self.status == 'Completed':
+        # Check if status changed to Completed
+        elif self.status == 'Completed' and old_status != 'Completed':
+            # Refresh vehicle from DB to get current status
+            self.vehicle.refresh_from_db()
+            
             # Check if there are ongoing repairs or PMS in progress
             ongoing_repairs = self.vehicle.repairs.filter(status='Ongoing').exists()
             ongoing_pms = self.vehicle.pms_records.filter(status='In Progress').exclude(id=self.id).exists()
             
-            if not ongoing_repairs and not ongoing_pms and self.vehicle.status == 'Under Repair':
-                # No ongoing maintenance, set vehicle to serviceable
+            # Only set to serviceable if:
+            # 1. No ongoing repairs or PMS
+            # 2. Vehicle is not marked for disposal
+            # 3. Vehicle is currently Under Repair or Unserviceable (could be set to serviceable)
+            if not ongoing_repairs and not ongoing_pms and self.vehicle.status != 'For Disposal':
+                # Set vehicle to serviceable when all maintenance is completed
                 self.vehicle.update_status(
                     'Serviceable',
                     reason=f'PMS completed for vehicle {self.vehicle.plate_number}',
@@ -941,8 +967,8 @@ class PMS(models.Model):
                 "Please approve the pre-inspection report first."
             )
         
-        # Rule 4: Post-inspection must be approved if provided
-        if self.post_inspection and not self.post_inspection.is_approved:
+        # Rule 4: Post-inspection must be approved only when marking PMS as completed
+        if self.status == 'Completed' and self.post_inspection and not self.post_inspection.is_approved:
             raise ValidationError(
                 "The post-inspection report must be approved before marking PMS as completed. "
                 "Please approve the post-inspection report first."
