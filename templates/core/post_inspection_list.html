@@ -70,6 +70,7 @@
                             <table class="table table-hover">
                                 <thead class="table-dark">
                                     <tr>
+                                        <th>Report Number</th>
                                         <th>Vehicle</th>
                                         <th>Report Type</th>
                                         <th>Inspection Date</th>
@@ -85,6 +86,9 @@
                                     {% for report in reports %}
                                     <tr>
                                         <td>
+                                            <strong>POST-{{ report.pk|stringformat:"05d" }}</strong>
+                                        </td>
+                                        <td>
                                             <div>
                                                 <strong>{{ report.vehicle.plate_number }}</strong><br>
                                                 <small class="text-muted">{{ report.vehicle.brand }} {{ report.vehicle.model }}</small>
@@ -94,10 +98,27 @@
                                             <span class="badge bg-info">{{ report.get_report_type_display }}</span>
                                         </td>
                                         <td>{{ report.inspection_date|date:"M d, Y g:i A" }}</td>
-                                        <td>{{ report.inspected_by.get_full_name }}</td>
                                         <td>
-                                            <span class="badge condition-{{ report.overall_condition }}">
-                                                {{ report.get_overall_condition_display }}
+                                            {% if report.inspected_by %}
+                                                {% if report.inspected_by.get_full_name %}
+                                                    {{ report.inspected_by.get_full_name }}
+                                                {% else %}
+                                                    {{ report.inspected_by.username|title }}
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Not specified</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge condition-{{ report.overall_condition }}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                                <strong>
+                                                    {% if report.overall_condition == 'excellent' %}Excellent
+                                                    {% elif report.overall_condition == 'good' %}Good
+                                                    {% elif report.overall_condition == 'fair' %}Fair
+                                                    {% elif report.overall_condition == 'poor' %}Poor
+                                                    {% elif report.overall_condition == 'critical' %}Critical
+                                                    {% else %}{{ report.overall_condition|title }}{% endif %}
+                                                </strong>
                                             </span>
                                         </td>
                                         <td>

@@ -210,8 +210,8 @@ class Vehicle(models.Model):
     status_change_reason = models.TextField(blank=True, verbose_name='Status Change Reason')
     date_acquired = models.DateField()
     current_mileage = models.IntegerField(default=0)
-    photo = models.ImageField(upload_to='vehicles/', blank=True, null=True)
-    registration_document = models.FileField(upload_to='documents/', blank=True, null=True)
+    photos = models.JSONField(default=list, blank=True, help_text="List of vehicle photo file paths")
+    registration_documents = models.JSONField(default=list, blank=True, help_text="List of registration document file paths")
     # RFID and Fleet Card Information
     rfid_autosweep_number = models.CharField(max_length=100, blank=True, verbose_name='Autosweep RFID Number')
     rfid_easytrip_number = models.CharField(max_length=100, blank=True, verbose_name='Easytrip RFID Number')
@@ -396,7 +396,13 @@ class Repair(models.Model):
     
     def save(self, *args, **kwargs):
         # Enforce business rules
-        self._validate_inspection_requirements()
+        # Skip PMS validation if skip_pms_validation is True
+        # This allows repairs created from PMS to share the same pre_inspection
+        skip_pms_validation = kwargs.pop('skip_pms_validation', False)
+        if skip_pms_validation:
+            self._validate_inspection_requirements_skip_pms()
+        else:
+            self._validate_inspection_requirements()
         
         # Store old status and cost to check if we need to re-calculate disposal status
         old_status = None
@@ -466,6 +472,74 @@ class Repair(models.Model):
                 auto_update=True
             )
     
+    def _validate_inspection_requirements_skip_pms(self):
+        """Validate inspection requirements except PMS usage checks (for repairs created from PMS)"""
+        from django.core.exceptions import ValidationError
+        
+        # Rule 1: Cannot create repair without approved pre-inspection
+        if not self.pk and not self.pre_inspection:
+            raise ValidationError(
+                "A repair cannot be created without an approved pre-inspection report. "
+                "Please create and approve a pre-inspection report first."
+            )
+        
+        # Rule 2: Cannot mark as completed without post-inspection
+        if self.status == 'Completed' and not self.post_inspection:
+            raise ValidationError(
+                "A repair cannot be marked as completed without a post-inspection report. "
+                "Please create and approve a post-inspection report first."
+            )
+        
+        # Rule 3: Pre-inspection must be approved
+        if self.pre_inspection and not self.pre_inspection.is_approved:
+            raise ValidationError(
+                "The pre-inspection report must be approved before creating a repair. "
+                "Please approve the pre-inspection report first."
+            )
+        
+        # Rule 4: Post-inspection must be approved only when marking repair as completed
+        if self.status == 'Completed' and self.post_inspection and not self.post_inspection.is_approved:
+            raise ValidationError(
+                "The post-inspection report must be approved before marking repair as completed. "
+                "Please approve the post-inspection report first."
+            )
+        
+        # Rule 5: Pre-inspection vehicle must match repair vehicle
+        if self.pre_inspection and self.vehicle:
+            if self.pre_inspection.vehicle != self.vehicle:
+                raise ValidationError(
+                    f"The pre-inspection report is for vehicle {self.pre_inspection.vehicle.plate_number}, "
+                    f"but this repair is for vehicle {self.vehicle.plate_number}. "
+                    "The pre-inspection report must be for the same vehicle as the repair."
+                )
+        
+        # Rule 6: Post-inspection vehicle must match repair vehicle
+        if self.post_inspection and self.vehicle:
+            if self.post_inspection.vehicle != self.vehicle:
+                raise ValidationError(
+                    f"The post-inspection report is for vehicle {self.post_inspection.vehicle.plate_number}, "
+                    f"but this repair is for vehicle {self.vehicle.plate_number}. "
+                    "The post-inspection report must be for the same vehicle as the repair."
+                )
+        
+        # Rule 7: Check for other repairs using this pre_inspection (but skip PMS check)
+        if self.pre_inspection:
+            existing_repair = Repair.objects.filter(pre_inspection=self.pre_inspection).exclude(pk=self.pk if self.pk else None).first()
+            if existing_repair:
+                raise ValidationError(
+                    f"This pre-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each pre-inspection report can only be used once."
+                )
+        
+        # Rule 8: Check for other repairs using this post_inspection (but skip PMS check)
+        if self.post_inspection:
+            existing_repair = Repair.objects.filter(post_inspection=self.post_inspection).exclude(pk=self.pk if self.pk else None).first()
+            if existing_repair:
+                raise ValidationError(
+                    f"This post-inspection report is already used by repair record for vehicle {existing_repair.vehicle.plate_number}. "
+                    "Each post-inspection report can only be used once."
+                )
+    
     def _validate_inspection_requirements(self):
         """Validate inspection requirements based on business rules"""
         from django.core.exceptions import ValidationError
@@ -517,9 +591,17 @@ class Repair(models.Model):
                 )
         
         # Rule 7: Pre-inspection can only be used once (by one repair or one PMS)
+        # Exception: A repair created from a PMS can share the same pre_inspection as the PMS
         if self.pre_inspection:
             existing_repair = Repair.objects.filter(pre_inspection=self.pre_inspection).exclude(pk=self.pk if self.pk else None).first()
-            existing_pms = PMS.objects.filter(pre_inspection=self.pre_inspection).first()
+            
+            # Check for PMS records using this pre_inspection
+            # IMPORTANT: Only check for standalone PMS (not linked to any repair yet)
+            # If a PMS is linked to a repair, that repair can share the pre_inspection
+            existing_pms = PMS.objects.filter(
+                pre_inspection=self.pre_inspection,
+                repair__isnull=True  # Only standalone PMS (not linked to a repair)
+            ).first()
             
             if existing_repair:
                 raise ValidationError(
@@ -528,9 +610,17 @@ class Repair(models.Model):
                 )
             
             if existing_pms:
+                # Found a standalone PMS using this pre_inspection
+                # This is only allowed if this repair will be linked to that PMS
+                # But we can't check that during validation, so we need to skip this check
+                # and rely on the view to handle it correctly
+                # Actually, we should allow it if the repair is being created from a PMS
+                # Since we can't know that during model validation, we'll skip this check
+                # and let the view/form handle it
                 raise ValidationError(
-                    f"This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
-                    "Each pre-inspection report can only be used once."
+                    f"[REPAIR MODEL VALIDATION] This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    f"Existing PMS ID: {existing_pms.pk}, Current Repair ID: {self.pk}. Each pre-inspection report can only be used once. "
+                    f"Note: If this repair is being created from a PMS, use skip_pms_validation=True."
                 )
         
         # Rule 8: Post-inspection can only be used once (by one repair or one PMS)
@@ -665,8 +755,8 @@ class PreInspectionReport(models.Model):
     # Photos
     photos = models.JSONField(default=list, blank=True, help_text="List of photo file paths")
     
-    # Driver report attachment
-    driver_report_attachment = models.FileField(upload_to='pre_inspection/driver_reports/', blank=True, null=True, help_text="Driver report attachment")
+    # Driver report attachments (multiple)
+    driver_report_attachments = models.JSONField(default=list, blank=True, help_text="List of driver report attachment file paths")
     
     # Approval
     approved_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_pre_inspections')
@@ -921,7 +1011,14 @@ class PMS(models.Model):
     
     def save(self, *args, **kwargs):
         # Enforce business rules
-        self._validate_inspection_requirements()
+        # Skip pre-inspection usage validation if skip_usage_validation is True
+        # This allows form validation to handle it (form already checks this)
+        skip_usage_validation = kwargs.pop('skip_usage_validation', False)
+        if not skip_usage_validation:
+            self._validate_inspection_requirements()
+        else:
+            # Still validate other requirements, just not the usage checks
+            self._validate_other_requirements()
         
         # Store old status to check if status changed
         old_status = None
@@ -964,8 +1061,8 @@ class PMS(models.Model):
                     auto_update=True
                 )
     
-    def _validate_inspection_requirements(self):
-        """Validate inspection requirements based on business rules"""
+    def _validate_other_requirements(self):
+        """Validate inspection requirements except usage checks (for form saves)"""
         from django.core.exceptions import ValidationError
         
         # Rule 1: Cannot create PMS without approved pre-inspection
@@ -1013,11 +1110,35 @@ class PMS(models.Model):
                     f"but this PMS is for vehicle {self.vehicle.plate_number}. "
                     "The post-inspection report must be for the same vehicle as the PMS."
                 )
+    
+    def _validate_inspection_requirements(self):
+        """Validate inspection requirements based on business rules"""
+        from django.core.exceptions import ValidationError
         
-        # Rule 7: Pre-inspection can only be used once (by one repair or one PMS)
+        # First validate other requirements
+        self._validate_other_requirements()
+        
+        # Rule 7: Check if pre-inspection is already used by another repair or PMS
+        # Exclude current instance and repairs created from this PMS
+        # NOTE: This validation is also done in the form, but we keep it here as a safety check
+        # However, we must be careful to exclude the current instance to avoid false positives
         if self.pre_inspection:
-            existing_repair = Repair.objects.filter(pre_inspection=self.pre_inspection).first()
-            existing_pms = PMS.objects.filter(pre_inspection=self.pre_inspection).exclude(pk=self.pk if self.pk else None).first()
+            # Check for standalone repairs (not linked to PMS) using this pre_inspection
+            standalone_repairs = Repair.objects.filter(
+                pre_inspection=self.pre_inspection,
+                pms_records__isnull=True
+            )
+            # Exclude repairs created from this PMS if it exists
+            if self.pk and self.repair:
+                standalone_repairs = standalone_repairs.exclude(pk=self.repair.pk)
+            existing_repair = standalone_repairs.first()
+            
+            # Check for other PMS records using this pre_inspection
+            # CRITICAL: Exclude current instance - without this, we'd find ourselves when saving
+            pms_query = PMS.objects.filter(pre_inspection=self.pre_inspection)
+            if self.pk:
+                pms_query = pms_query.exclude(pk=self.pk)
+            existing_pms = pms_query.first()
             
             if existing_repair:
                 raise ValidationError(
@@ -1026,15 +1147,32 @@ class PMS(models.Model):
                 )
             
             if existing_pms:
-                raise ValidationError(
-                    f"This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
-                    "Each pre-inspection report can only be used once."
-                )
+                # Final check: ensure we're not comparing against ourselves
+                if existing_pms.pk != self.pk:
+                    raise ValidationError(
+                        f"[MODEL VALIDATION] This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                        f"Existing PMS ID: {existing_pms.pk}, Current PMS ID: {self.pk}. Each pre-inspection report can only be used once."
+                    )
         
-        # Rule 8: Post-inspection can only be used once (by one repair or one PMS)
+        # Rule 8: Check if post-inspection is already used by another repair or PMS
+        # Exclude current instance and repairs created from this PMS
         if self.post_inspection:
-            existing_repair = Repair.objects.filter(post_inspection=self.post_inspection).first()
-            existing_pms = PMS.objects.filter(post_inspection=self.post_inspection).exclude(pk=self.pk if self.pk else None).first()
+            # Check for standalone repairs (not linked to PMS) using this post_inspection
+            standalone_repairs = Repair.objects.filter(
+                post_inspection=self.post_inspection,
+                pms_records__isnull=True
+            )
+            # Exclude repairs created from this PMS if it exists
+            if self.pk and self.repair:
+                standalone_repairs = standalone_repairs.exclude(pk=self.repair.pk)
+            existing_repair = standalone_repairs.first()
+            
+            # Check for other PMS records using this post_inspection
+            # CRITICAL: Exclude current instance
+            pms_query = PMS.objects.filter(post_inspection=self.post_inspection)
+            if self.pk:
+                pms_query = pms_query.exclude(pk=self.pk)
+            existing_pms = pms_query.first()
             
             if existing_repair:
                 raise ValidationError(
@@ -1043,10 +1181,12 @@ class PMS(models.Model):
                 )
             
             if existing_pms:
-                raise ValidationError(
-                    f"This post-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
-                    "Each post-inspection report can only be used once."
-                )
+                # Final check: ensure we're not comparing against ourselves
+                if existing_pms.pk != self.pk:
+                    raise ValidationError(
+                        f"[MODEL VALIDATION] This post-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                        f"Existing PMS ID: {existing_pms.pk}, Current PMS ID: {self.pk}. Each post-inspection report can only be used once."
+                    )
     
     class Meta:
         verbose_name = 'Preventive Maintenance Service'

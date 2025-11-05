@@ -11,6 +11,18 @@
                     <h3 class="card-title">{{ title }}</h3>
                 </div>
                 <div class="card-body">
+                    <!-- Display form non-field errors (ValidationError from clean method) -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <h6><i class="bi bi-exclamation-triangle"></i> Validation Errors</h6>
+                            <ul class="mb-0">
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
                     <form method="post">
                         {% csrf_token %}
                         
@@ -180,6 +192,18 @@
                             <div class="col-12">
                                 <h5><i class="bi bi-gear"></i> Parts to Replace (Optional)</h5>
                                 <p class="text-muted small">If parts were replaced during this PMS, add them below. This will create a repair record.</p>
+                                
+                                <!-- Display formset non-form errors -->
+                                {% if formset.non_form_errors %}
+                                    <div class="alert alert-danger mt-2">
+                                        <strong>Formset Errors:</strong>
+                                        <ul class="mb-0">
+                                            {% for error in formset.non_form_errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -252,7 +276,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary" id="add-part-btn">
+                            <button type="button" class="btn btn-sm btn-primary" id="add-part-btn" onclick="return false;">
                                 <i class="bi bi-plus-circle"></i> Add Row
                             </button>
                         </div>
@@ -480,7 +504,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Formset handling (only if formset exists)
     const partsFormset = document.getElementById('parts-tbody');
     const addPartBtn = document.getElementById('add-part-btn');
-    const totalFormsInput = document.querySelector('#id_part_items-TOTAL_FORMS');
+    // Find the TOTAL_FORMS input - it could be part_items-TOTAL_FORMS or something else depending on formset prefix
+    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
     
     let formCount = 0;
     if (totalFormsInput) {
@@ -488,80 +513,204 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Add new part form (only if button exists)
-    if (addPartBtn && totalFormsInput) {
-        addPartBtn.addEventListener('click', function() {
-        // Find the first part row as template
-        const firstPartRow = partsFormset.querySelector('.part-form');
-        if (!firstPartRow) return;
-        
-        // Destroy Select2 on the template row before cloning
-        const templateSelect = firstPartRow.querySelector('select[name*="-part"]');
-        if (templateSelect && $(templateSelect).hasClass('select2-hidden-accessible')) {
-            $(templateSelect).select2('destroy');
-        }
-        
-        // Clone the row
-        const newRow = firstPartRow.cloneNode(true);
-        
-        // Update form index
-        newRow.innerHTML = newRow.innerHTML.replace(/-0-/g, `-${formCount}-`);
-        newRow.style.display = '';
-        
-        // Clear all values in the new row
-        newRow.querySelectorAll('input, select, textarea').forEach(input => {
-            const name = input.name || '';
-            if (input.type !== 'checkbox' && !name.includes('DELETE') && !name.includes('id') && !name.includes('TOTAL') && !name.includes('MIN') && !name.includes('MAX')) {
-                input.value = '';
-                // For selects, reset to empty
-                if (input.tagName === 'SELECT') {
-                    input.selectedIndex = -1;
+    if (addPartBtn) {
+        addPartBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Add part button clicked');
+            
+            if (!partsFormset) {
+                console.error('Parts tbody not found');
+                return false;
+            }
+            
+            // Find the first part row as template
+            const firstPartRow = partsFormset.querySelector('.part-form');
+            if (!firstPartRow) {
+                console.error('No part row found to clone');
+                alert('No existing rows found. Please ensure at least one part row exists.');
+                return false;
+            }
+            
+            if (!totalFormsInput) {
+                console.error('Total forms input not found. Looking for input with name ending in "-TOTAL_FORMS"');
+                const allInputs = document.querySelectorAll('input[type="hidden"]');
+                console.log('Available hidden inputs:', Array.from(allInputs).map(inp => inp.name));
+                return false;
+            }
+            
+            console.log('Found first row, cloning...');
+            
+            // Get current total forms count
+            let currentTotalForms = parseInt(totalFormsInput.value) || 0;
+            
+            // Destroy Select2 on the template row before cloning if it exists
+            const templateSelect = firstPartRow.querySelector('select[name*="-part"]');
+            if (templateSelect && typeof $ !== 'undefined' && $(templateSelect).hasClass('select2-hidden-accessible')) {
+                try {
+                    $(templateSelect).select2('destroy');
+                } catch(e) {
+                    console.warn('Could not destroy Select2:', e);
                 }
             }
+            
+            // Clone the row
+            const newRow = firstPartRow.cloneNode(true);
+            
+            // Get the select element from the cloned row
+            const newSelect = newRow.querySelector('select[name*="-part"]');
+            
+            // Destroy any Select2 instances on the cloned row's select element
+            if (newSelect && typeof $ !== 'undefined' && $(newSelect).hasClass('select2-hidden-accessible')) {
+                try {
+                    $(newSelect).select2('destroy');
+                } catch(e) {
+                    console.warn('Could not destroy Select2:', e);
+                }
+            }
+            
+            // Also remove any Select2 containers that might have been cloned
+            newRow.querySelectorAll('.select2-container').forEach(function(container) {
+                container.remove();
+            });
+            
+            // Remove any Select2 hidden inputs that might have been cloned
+            newRow.querySelectorAll('input.select2-hidden-accessible').forEach(function(input) {
+                input.remove();
+            });
+            
+            // Update form indices for all form fields in the new row
+            // First, get the prefix from the first row (e.g., "repairpartitem-0-" or "part_items-0-")
+            const sampleField = firstPartRow.querySelector('input[name*="-"], select[name*="-"]');
+            let formsetPrefix = '';
+            if (sampleField && sampleField.name) {
+                // Extract prefix like "repairpartitem" or "part_items" from "repairpartitem-0-part"
+                const match = sampleField.name.match(/^([^-]+)-\d+-/);
+                if (match) {
+                    formsetPrefix = match[1];
+                }
+            }
+            
+            // If we couldn't determine the prefix, try common patterns
+            if (!formsetPrefix) {
+                formsetPrefix = 'repairpartitem'; // Default for inline formsets
+            }
+            
+            console.log('Formset prefix detected:', formsetPrefix);
+            
+            newRow.querySelectorAll('input, select, textarea, label').forEach(function(field) {
+                // Update name attribute - match pattern like "prefix-0-fieldname" and replace with "prefix-N-fieldname"
+                if (field.name) {
+                    // Match any prefix followed by digits, e.g., "repairpartitem-0-part" -> "repairpartitem-1-part"
+                    field.name = field.name.replace(new RegExp('^' + formsetPrefix + '-\\d+-'), formsetPrefix + '-' + currentTotalForms + '-');
+                }
+                // Update id attribute
+                if (field.id) {
+                    // Match pattern like "id_repairpartitem-0-part" -> "id_repairpartitem-1-part"
+                    field.id = field.id.replace(new RegExp('id_' + formsetPrefix + '-\\d+-'), 'id_' + formsetPrefix + '-' + currentTotalForms + '-');
+                }
+                // Update for attribute (for labels)
+                if (field.htmlFor) {
+                    field.htmlFor = field.htmlFor.replace(new RegExp('id_' + formsetPrefix + '-\\d+-'), 'id_' + formsetPrefix + '-' + currentTotalForms + '-');
+                }
+            });
+            
+            // Clear all values in the new row
+            newRow.querySelectorAll('input, select, textarea').forEach(function(input) {
+                if (input.type === 'checkbox') {
+                    // Uncheck delete checkbox
+                    if (input.name && input.name.includes('-DELETE')) {
+                        input.checked = false;
+                    }
+                } else if (input.type !== 'hidden') {
+                    // Clear value for all other non-hidden fields
+                    if (input.tagName === 'SELECT') {
+                        input.selectedIndex = 0; // Reset select to first option
+                    } else {
+                        input.value = '';
+                    }
+                }
+            });
+            
+            // Clear any error messages
+            newRow.querySelectorAll('.text-danger').forEach(function(errorDiv) {
+                errorDiv.remove();
+            });
+            
+            // Show the new row
+            newRow.style.display = '';
+            
+            // Reinitialize Select2 on the original row if it had Select2 before
+            if (templateSelect && typeof $ !== 'undefined') {
+                try {
+                    $(templateSelect).select2({
+                        placeholder: 'Select a part...',
+                        allowClear: true,
+                        width: '100%',
+                        dropdownAutoWidth: true
+                    });
+                } catch(e) {
+                    console.warn('Could not reinitialize Select2 on template:', e);
+                }
+            }
+            
+            // Append to tbody BEFORE initializing Select2
+            partsFormset.appendChild(newRow);
+            
+            // Increment total forms count AFTER appending
+            currentTotalForms++;
+            formCount = currentTotalForms;
+            totalFormsInput.value = currentTotalForms;
+            
+            // Initialize Select2 for the new part dropdown AFTER it's been appended
+            if (newSelect) {
+                if (typeof $ !== 'undefined' && typeof $.fn.select2 !== 'undefined') {
+                    try {
+                        $(newSelect).select2({
+                            placeholder: 'Select a part...',
+                            allowClear: true,
+                            width: '100%',
+                            dropdownAutoWidth: true
+                        });
+                    } catch(e) {
+                        console.warn('Could not initialize Select2:', e);
+                    }
+                } else {
+                    console.warn('jQuery or Select2 not available yet. Select2 will be initialized when ready.');
+                    if (typeof $ !== 'undefined') {
+                        $(document).ready(function() {
+                            if (typeof $.fn.select2 !== 'undefined' && newSelect.parentNode) {
+                                $(newSelect).select2({
+                                    placeholder: 'Select a part...',
+                                    allowClear: true,
+                                    width: '100%',
+                                    dropdownAutoWidth: true
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+            
+            // Add formatting to the new cost input field
+            const newCostInput = newRow.querySelector('input[name$="-cost"]');
+            if (newCostInput) {
+                restrictDecimalInput(newCostInput);
+                formatWhileTyping(newCostInput);
+                newCostInput.addEventListener('blur', function() {
+                    formatInput(this);
+                });
+            }
+            
+            // Scroll to new row
+            newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            console.log('Row added successfully. Total forms:', currentTotalForms);
+            return false;
         });
-        
-        // Show DELETE checkbox but uncheck it
-        const deleteCheckbox = newRow.querySelector('input[name$="-DELETE"]');
-        if (deleteCheckbox) deleteCheckbox.checked = false;
-        
-        // Reinitialize Select2 on the original row if it had Select2 before
-        if (templateSelect) {
-            $(templateSelect).select2({
-                placeholder: 'Select a part...',
-                allowClear: true,
-                width: '100%',
-                dropdownAutoWidth: true
-            });
-        }
-        
-        // Append to tbody
-        partsFormset.appendChild(newRow);
-        formCount++;
-        totalFormsInput.value = formCount;
-        
-        // Initialize Select2 for the new part dropdown
-        const newPartSelect = newRow.querySelector('select[name*="-part"]');
-        if (newPartSelect) {
-            $(newPartSelect).select2({
-                placeholder: 'Select a part...',
-                allowClear: true,
-                width: '100%',
-                dropdownAutoWidth: true
-            });
-        }
-        
-        // Add formatting to the new cost input field
-        const newCostInput = newRow.querySelector('input[name$="-cost"]');
-        if (newCostInput) {
-            restrictDecimalInput(newCostInput);
-            formatWhileTyping(newCostInput);
-            newCostInput.addEventListener('blur', function() {
-                formatInput(this);
-            });
-        }
-        
-        // Scroll to new row
-        newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        });
+    } else {
+        console.error('Add part button not found');
     }
     
     // Remove part form
@@ -571,6 +720,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const deleteCheckbox = form.querySelector('input[name$="-DELETE"]');
             const idInput = form.querySelector('input[name$="-id"]');
             
+            // Get fresh reference to totalFormsInput
+            const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+            
             if (idInput && idInput.value) {
                 // Existing form - mark for deletion
                 deleteCheckbox.checked = true;
@@ -579,12 +731,20 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 // New form - destroy Select2 and remove from DOM
                 const select = form.querySelector('select[name*="-part"]');
-                if (select && $(select).hasClass('select2-hidden-accessible')) {
-                    $(select).select2('destroy');
+                if (select && typeof $ !== 'undefined' && $(select).hasClass('select2-hidden-accessible')) {
+                    try {
+                        $(select).select2('destroy');
+                    } catch(e) {
+                        console.warn('Could not destroy Select2:', e);
+                    }
                 }
                 form.remove();
-                formCount--;
-                totalFormsInput.value = formCount;
+                if (totalFormsInput) {
+                    let currentCount = parseInt(totalFormsInput.value) || 0;
+                    currentCount--;
+                    formCount = currentCount;
+                    totalFormsInput.value = currentCount;
+                }
             }
         }
     });
@@ -647,6 +807,62 @@ document.addEventListener('DOMContentLoaded', function() {
     const pmsForm = document.querySelector('form[method="post"]');
     if (pmsForm) {
         pmsForm.addEventListener('submit', function(e) {
+            // Get the formset prefix
+            const sampleField = document.querySelector('#parts-table input[name*="-"], #parts-table select[name*="-"]');
+            let formsetPrefix = 'repairpartitem'; // Default
+            if (sampleField && sampleField.name) {
+                const match = sampleField.name.match(/^([^-]+)-\d+-/);
+                if (match) {
+                    formsetPrefix = match[1];
+                }
+            }
+            
+            // Mark empty forms for deletion (forms without a part selected)
+            // This prevents validation errors for empty forms
+            const partRows = document.querySelectorAll('#parts-table .part-form');
+            let totalFormsToKeep = 0;
+            
+            partRows.forEach(function(row) {
+                const partSelect = row.querySelector('select[name*="-part"]');
+                const deleteCheckbox = row.querySelector('input[type="checkbox"][name*="-DELETE"]');
+                const idInput = row.querySelector('input[type="hidden"][name*="-id"]');
+                
+                // If it's a new form (no id) and no part is selected, mark it for deletion
+                if (partSelect && (!idInput || !idInput.value)) {
+                    if (!partSelect.value || partSelect.value === '') {
+                        if (deleteCheckbox) {
+                            deleteCheckbox.checked = true;
+                        }
+                        // Hide the row
+                        row.style.display = 'none';
+                    } else {
+                        // Form has a part selected, keep it
+                        totalFormsToKeep++;
+                    }
+                } else if (idInput && idInput.value) {
+                    // Existing form with ID - keep it unless already marked for deletion
+                    if (!deleteCheckbox || !deleteCheckbox.checked) {
+                        totalFormsToKeep++;
+                    }
+                }
+            });
+            
+            // Update TOTAL_FORMS to reflect only the forms we're keeping
+            const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+            if (totalFormsInput) {
+                // Count visible forms that are not marked for deletion
+                let visibleForms = 0;
+                partRows.forEach(function(row) {
+                    if (row.style.display !== 'none') {
+                        const deleteCheckbox = row.querySelector('input[type="checkbox"][name*="-DELETE"]');
+                        if (!deleteCheckbox || !deleteCheckbox.checked) {
+                            visibleForms++;
+                        }
+                    }
+                });
+                totalFormsInput.value = visibleForms;
+            }
+            
             // Remove commas from service cost (re-query in case it wasn't found initially)
             const costInput = document.querySelector('input[name="cost"]') || serviceCostInput;
             if (costInput && costInput.value && costInput.value.trim() !== '') {
@@ -674,6 +890,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             }
+            
+            // Ensure quantity fields are valid numbers
+            document.querySelectorAll('#parts-table input[name$="-quantity"]').forEach(function(input) {
+                if (input.value && input.value.trim() !== '') {
+                    let cleanValue = input.value.replace(/,/g, '').trim();
+                    if (cleanValue && !isNaN(parseFloat(cleanValue))) {
+                        const numValue = parseFloat(cleanValue);
+                        input.value = numValue.toString();
+                    } else {
+                        input.value = '';
+                    }
+                }
+            });
         });
     }
 });

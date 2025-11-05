@@ -16,7 +16,16 @@
                     Vehicle: {{ report.vehicle.plate_number }}<br>
                     Report Type: {{ report.get_report_type_display }}<br>
                     Inspection Date: {{ report.inspection_date|date:"M d, Y g:i A" }}<br>
-                    Inspected By: {{ report.inspected_by.get_full_name }}
+                    Inspected By: 
+                    {% if report.inspected_by %}
+                        {% if report.inspected_by.get_full_name %}
+                            {{ report.inspected_by.get_full_name }}
+                        {% else %}
+                            {{ report.inspected_by.username|title }}
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">Not specified</span>
+                    {% endif %}
                 </div>
                 <p class="text-danger"><strong>This action cannot be undone.</strong></p>
                 <form method="post">

@@ -132,12 +132,42 @@
                     <h5 class="mb-3">Documents</h5>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Photo</label>
-                            {{ form.photo }}
+                            <label class="form-label">Photos</label>
+                            <input type="file" name="photos" class="form-control" multiple accept="image/*">
+                            <div class="form-text">You can select multiple photos</div>
+                            {% if vehicle and vehicle.photos %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Current photos:</small>
+                                    <ul class="list-unstyled mt-1">
+                                        {% for photo_path in vehicle.photos %}
+                                            <li>
+                                                <a href="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ photo_path }}{% else %}/media/{{ photo_path }}{% endif %}" target="_blank">
+                                                    <i class="bi bi-image"></i> {{ photo_path|truncatechars:50 }}
+                                                </a>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Registration Document</label>
-                            {{ form.registration_document }}
+                            <label class="form-label">Registration Documents</label>
+                            <input type="file" name="registration_documents" class="form-control" multiple>
+                            <div class="form-text">You can select multiple documents (PDF, DOC, etc.)</div>
+                            {% if vehicle and vehicle.registration_documents %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Current documents:</small>
+                                    <ul class="list-unstyled mt-1">
+                                        {% for doc_path in vehicle.registration_documents %}
+                                            <li>
+                                                <a href="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ doc_path }}{% else %}/media/{{ doc_path }}{% endif %}" target="_blank">
+                                                    <i class="bi bi-file-earmark"></i> {{ doc_path|truncatechars:50 }}
+                                                </a>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="mb-3">

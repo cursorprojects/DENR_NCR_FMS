@@ -38,8 +38,28 @@
                         <p class="mb-2">The post-inspection report has been approved and the PMS is ready to be completed.</p>
                         <div class="row">
                             <div class="col-md-6">
-                                <p><strong>Inspected By:</strong> {{ post_inspection.inspected_by.get_full_name }}</p>
-                                <p><strong>Approved By:</strong> {{ post_inspection.approved_by.get_full_name }}</p>
+                                <p><strong>Inspected By:</strong> 
+                                    {% if post_inspection.inspected_by %}
+                                        {% if post_inspection.inspected_by.get_full_name %}
+                                            {{ post_inspection.inspected_by.get_full_name }}
+                                        {% else %}
+                                            {{ post_inspection.inspected_by.username|title }}
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Not specified</span>
+                                    {% endif %}
+                                </p>
+                                <p><strong>Approved By:</strong> 
+                                    {% if post_inspection.approved_by %}
+                                        {% if post_inspection.approved_by.get_full_name %}
+                                            {{ post_inspection.approved_by.get_full_name }}
+                                        {% else %}
+                                            {{ post_inspection.approved_by.username|title }}
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Not specified</span>
+                                    {% endif %}
+                                </p>
                             </div>
                             <div class="col-md-6">
                                 <p><strong>Approval Date:</strong> {{ post_inspection.approval_date|date:"M d, Y g:i A" }}</p>

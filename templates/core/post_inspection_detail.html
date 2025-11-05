@@ -51,7 +51,17 @@
                                 </tr>
                                 <tr>
                                     <td><strong>Inspected By:</strong></td>
-                                    <td>{{ report.inspected_by.get_full_name }}</td>
+                                    <td>
+                                        {% if report.inspected_by %}
+                                            {% if report.inspected_by.get_full_name %}
+                                                {{ report.inspected_by.get_full_name }}
+                                            {% else %}
+                                                {{ report.inspected_by.username|title }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Not specified</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             </table>
                         </div>
@@ -69,8 +79,15 @@
                                 <tr>
                                     <td><strong>Overall Condition:</strong></td>
                                     <td>
-                                        <span class="badge condition-{{ report.overall_condition }}">
-                                            {{ report.get_overall_condition_display }}
+                                        <span class="badge condition-{{ report.overall_condition }}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                            <strong>
+                                                {% if report.overall_condition == 'excellent' %}Excellent
+                                                {% elif report.overall_condition == 'good' %}Good
+                                                {% elif report.overall_condition == 'fair' %}Fair
+                                                {% elif report.overall_condition == 'poor' %}Poor
+                                                {% elif report.overall_condition == 'critical' %}Critical
+                                                {% else %}{{ report.overall_condition|title }}{% endif %}
+                                            </strong>
                                         </span>
                                     </td>
                                 </tr>
@@ -271,6 +288,36 @@
                     </div>
                     {% endif %}
 
+                    <!-- Attachments -->
+                    {% if report.replaced_parts_images %}
+                    <h5 class="mb-3"><i class="bi bi-image"></i> Replaced Parts Images</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header bg-info bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-image"></i> Images of Replaced Parts</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        {% for image_path in report.replaced_parts_images %}
+                                            <div class="col-md-3 mb-3">
+                                                <div class="card">
+                                                    <a href="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ image_path }}{% else %}/media/{{ image_path }}{% endif %}" target="_blank">
+                                                        <img src="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ image_path }}{% else %}/media/{{ image_path }}{% endif %}" class="card-img-top" alt="Replaced part image" style="height: 200px; object-fit: cover; cursor: pointer;">
+                                                    </a>
+                                                    <div class="card-body p-2">
+                                                        <small class="text-muted">{{ image_path|truncatechars:30 }}</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Approval Information -->
                     {% if report.is_approved %}
                     <h5 class="mb-3"><i class="bi bi-check-circle"></i> Approval Information</h5>
@@ -283,10 +330,24 @@
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-6">
-                                            <strong>Approved By:</strong> {{ report.approved_by.get_full_name }}
+                                            <strong>Approved By:</strong> 
+                                            {% if report.approved_by %}
+                                                {% if report.approved_by.get_full_name %}
+                                                    {{ report.approved_by.get_full_name }}
+                                                {% else %}
+                                                    {{ report.approved_by.username|title }}
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Not specified</span>
+                                            {% endif %}
                                         </div>
                                         <div class="col-md-6">
-                                            <strong>Approval Date:</strong> {{ report.approval_date|date:"M d, Y g:i A" }}
+                                            <strong>Approval Date:</strong> 
+                                            {% if report.approval_date %}
+                                                {{ report.approval_date|date:"M d, Y g:i A" }}
+                                            {% else %}
+                                                <span class="text-muted">Not specified</span>
+                                            {% endif %}
                                         </div>
                                         {% if report.approval_notes %}
                                         <div class="col-md-12 mt-2">

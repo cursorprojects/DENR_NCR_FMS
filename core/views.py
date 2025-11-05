@@ -3,6 +3,8 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ValidationError
+from django import forms
 import json
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Sum, Count, Q, F
@@ -270,7 +272,43 @@ def vehicle_create(request):
     if request.method == 'POST':
         form = VehicleForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            vehicle = form.save(commit=False)
+            
+            # Handle multiple photos
+            photos_list = []
+            if 'photos' in request.FILES:
+                photos_list = [f for f in request.FILES.getlist('photos')]
+            # Also check for legacy 'photo' field
+            if 'photo' in request.FILES:
+                photos_list.extend([f for f in request.FILES.getlist('photo')])
+            
+            if photos_list:
+                from django.core.files.storage import default_storage
+                photo_paths = []
+                for photo in photos_list:
+                    if photo:
+                        path = default_storage.save(f'vehicles/photos/{photo.name}', photo)
+                        photo_paths.append(path)
+                vehicle.photos = photo_paths
+            
+            # Handle multiple registration documents
+            documents_list = []
+            if 'registration_documents' in request.FILES:
+                documents_list = [f for f in request.FILES.getlist('registration_documents')]
+            # Also check for legacy 'registration_document' field
+            if 'registration_document' in request.FILES:
+                documents_list.extend([f for f in request.FILES.getlist('registration_document')])
+            
+            if documents_list:
+                from django.core.files.storage import default_storage
+                doc_paths = []
+                for doc in documents_list:
+                    if doc:
+                        path = default_storage.save(f'documents/registration/{doc.name}', doc)
+                        doc_paths.append(path)
+                vehicle.registration_documents = doc_paths
+            
+            vehicle.save()
             messages.success(request, 'Vehicle created successfully!')
             return redirect('vehicle_list')
     else:
@@ -285,7 +323,47 @@ def vehicle_edit(request, pk):
     if request.method == 'POST':
         form = VehicleForm(request.POST, request.FILES, instance=vehicle)
         if form.is_valid():
-            form.save()
+            vehicle = form.save(commit=False)
+            
+            # Get existing files
+            existing_photos = vehicle.photos if vehicle.photos else []
+            existing_documents = vehicle.registration_documents if vehicle.registration_documents else []
+            
+            # Handle multiple photos
+            photos_list = []
+            if 'photos' in request.FILES:
+                photos_list = [f for f in request.FILES.getlist('photos')]
+            # Also check for legacy 'photo' field
+            if 'photo' in request.FILES:
+                photos_list.extend([f for f in request.FILES.getlist('photo')])
+            
+            if photos_list:
+                from django.core.files.storage import default_storage
+                photo_paths = existing_photos.copy()
+                for photo in photos_list:
+                    if photo:
+                        path = default_storage.save(f'vehicles/photos/{photo.name}', photo)
+                        photo_paths.append(path)
+                vehicle.photos = photo_paths
+            
+            # Handle multiple registration documents
+            documents_list = []
+            if 'registration_documents' in request.FILES:
+                documents_list = [f for f in request.FILES.getlist('registration_documents')]
+            # Also check for legacy 'registration_document' field
+            if 'registration_document' in request.FILES:
+                documents_list.extend([f for f in request.FILES.getlist('registration_document')])
+            
+            if documents_list:
+                from django.core.files.storage import default_storage
+                doc_paths = existing_documents.copy()
+                for doc in documents_list:
+                    if doc:
+                        path = default_storage.save(f'documents/registration/{doc.name}', doc)
+                        doc_paths.append(path)
+                vehicle.registration_documents = doc_paths
+            
+            vehicle.save()
             messages.success(request, 'Vehicle updated successfully!')
             return redirect('vehicle_detail', pk=pk)
     else:
@@ -1170,77 +1248,234 @@ def pms_create(request):
     """Create new PMS record"""
     if request.method == 'POST':
         form = PMSForm(request.POST)
+        
+        # Check if there are any parts in the formset data
+        # Find the formset prefix from POST data
+        formset_prefix = None
+        total_forms = 0
+        has_parts_data = False
+        
+        # Find the TOTAL_FORMS field to determine prefix
+        for key in request.POST.keys():
+            if key.endswith('-TOTAL_FORMS'):
+                formset_prefix = key.replace('-TOTAL_FORMS', '')
+                total_forms = int(request.POST.get(key, 0))
+                break
+        
+        # If we found a prefix, check if any form has a part selected
+        if formset_prefix and total_forms > 0:
+            for i in range(total_forms):
+                part_value = request.POST.get(f'{formset_prefix}-{i}-part', '')
+                delete_value = request.POST.get(f'{formset_prefix}-{i}-DELETE', '')
+                if part_value and not delete_value:
+                    has_parts_data = True
+                    break
+        
+        # Validate form first
+        form_valid = form.is_valid()
+        
+        # DEBUG: Check if form has errors after validation
+        if form.errors:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Form validation errors: {form.errors}")
+            logger.debug(f"Form non_field_errors: {form.non_field_errors()}")
+        
+        # Create formset without instance for validation (like repair_create)
         formset = PMSRepairPartItemFormSet(request.POST)
         
+        # Only validate formset if there are parts or if formset has data
+        formset_valid = True
+        if has_parts_data or total_forms > 0:
+            formset_valid = formset.is_valid()
+        
         try:
-            if form.is_valid() and formset.is_valid():
-                pms = form.save()
+            if form_valid and formset_valid:
+                # CRITICAL: If form has ANY errors, don't save - even if form_valid is True
+                # This can happen if ValidationError was raised but form_valid wasn't properly set
+                if form.errors:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"CRITICAL: Form has errors but form_valid is True! Errors: {form.errors}")
+                    # Don't save - fall through to error handling
+                    form_valid = False
                 
-                # Check if user selected any parts to replace
-                has_parts = False
-                parts_cost = 0
-                
-                for part_form in formset:
-                    if part_form.cleaned_data and not part_form.cleaned_data.get('DELETE', False):
-                        has_parts = True
-                        cost = part_form.cleaned_data.get('cost') or 0
-                        parts_cost += float(cost)
-                
-                # If parts were replaced, create a repair record
-                if has_parts:
-                    from django.utils import timezone
+                # Only save if form is truly valid (no errors)
+                if form_valid and formset_valid and not form.errors:
+                    # Save with skip_usage_validation=True since form already validated pre-inspection usage
+                    pms = form.save(commit=False)
+                    pms.save(skip_usage_validation=True)
                     
-                    # Get PMS service cost to use as labor cost
-                    pms_service_cost = float(pms.cost) if pms.cost else 0
-                    
-                    # Create repair record for PMS
-                    repair = Repair.objects.create(
-                        vehicle=pms.vehicle,
-                        date_of_repair=pms.scheduled_date,
-                        description=f"PMS: {pms.service_type}",
-                        cost=parts_cost,
-                        labor_cost=pms_service_cost,
-                        repair_shop=form.cleaned_data.get('repair_shop'),
-                        technician=pms.technician,
-                        status='Completed',
-                        pre_inspection=pms.pre_inspection  # Link to same pre-inspection
-                    )
-                    
-                    # Link repair to PMS
-                    pms.repair = repair
-                    pms.save()
-                    
-                    # Save formset with the repair
-                    formset.instance = repair
-                    formset.save()
-                    
-                    # Log activity
-                    ActivityLog.objects.create(
-                        user=request.user,
-                        action='create',
-                        model_name='Repair',
-                        object_id=repair.id,
-                        description=f'Created repair record for PMS: {pms.vehicle.plate_number}',
-                        ip_address=request.META.get('REMOTE_ADDR')
-                    )
-                
-                # Log activity for PMS
-                ActivityLog.objects.create(
-                    user=request.user,
-                    action='create',
-                    model_name='PMS',
-                    object_id=pms.id,
-                    description=f'Created PMS record for {pms.vehicle.plate_number} - {pms.service_type}',
-                    ip_address=request.META.get('REMOTE_ADDR')
-                )
-                
-                messages.success(request, 'PMS record created successfully!')
-                return redirect('pms_list')
-        except ValidationError as e:
+                    # Only proceed if we successfully saved (pms has a pk)
+                    if not hasattr(pms, 'pk') or pms.pk is None:
+                        # Save failed somehow, don't continue
+                        messages.error(request, 'Failed to save PMS record. Please try again.')
+                    else:
+                        # Check if user selected any parts to replace
+                        has_parts = False
+                        parts_cost = 0
+                        
+                        for part_form in formset:
+                            if part_form.cleaned_data and not part_form.cleaned_data.get('DELETE', False):
+                                has_parts = True
+                                cost = part_form.cleaned_data.get('cost') or 0
+                                try:
+                                    parts_cost += float(cost)
+                                except (ValueError, TypeError):
+                                    # Skip invalid cost values
+                                    pass
+                        
+                        # If parts were replaced, create a repair record
+                        if has_parts:
+                            from django.utils import timezone
+                            
+                            # Get PMS service cost to use as labor cost
+                            try:
+                                pms_service_cost = float(pms.cost) if pms.cost else 0
+                            except (ValueError, TypeError):
+                                pms_service_cost = 0
+                            
+                            # Ensure parts_cost doesn't exceed max_digits (10 digits total, 8 before decimal, 2 after)
+                            # max_digits=10, decimal_places=2 means max value is 99999999.99
+                            max_cost = 99999999.99
+                            if parts_cost > max_cost:
+                                messages.warning(request, f'Total parts cost ({parts_cost:.2f}) exceeds maximum allowed ({max_cost:.2f}). It will be capped at maximum.')
+                                parts_cost = max_cost
+                            
+                            # Create repair record for PMS with 'Ongoing' status initially
+                            # It will be marked as 'Completed' when post-inspection is done
+                            repair_data = {
+                                'vehicle': pms.vehicle,
+                                'date_of_repair': pms.scheduled_date,
+                                'description': f"PMS: {pms.service_type}",
+                                'cost': min(parts_cost, max_cost),  # Cap at maximum
+                                'labor_cost': min(pms_service_cost, max_cost) if pms_service_cost else 0,
+                                'repair_shop': form.cleaned_data.get('repair_shop'),
+                                'technician': pms.technician,
+                                'status': 'Ongoing',  # Start as Ongoing, not Completed
+                            }
+                            # Only add pre_inspection if it exists and is not None
+                            if pms.pre_inspection_id:
+                                try:
+                                    # Verify the pre_inspection still exists by accessing the ID
+                                    pre_inspection = PreInspectionReport.objects.get(pk=pms.pre_inspection_id)
+                                    repair_data['pre_inspection'] = pre_inspection
+                                except (PreInspectionReport.DoesNotExist, AttributeError):
+                                    # Pre-inspection was deleted or doesn't exist, skip it
+                                    pass
+                            
+                            # Create repair with skip_pms_validation=True since it's being created from PMS
+                            # The repair can share the same pre_inspection as the PMS
+                            # We need to create it without validation first, then save with skip_pms_validation
+                            repair = Repair(**repair_data)
+                            repair.save(skip_pms_validation=True)
+                            
+                            # Link repair to PMS
+                            # Use update() to avoid triggering model validation again
+                            # The form validation already checked everything
+                            PMS.objects.filter(pk=pms.pk).update(repair=repair)
+                            # Refresh the instance to get the updated repair
+                            pms.refresh_from_db()
+                            
+                            # Create a new formset with the repair instance to ensure proper saving
+                            # This is necessary because the formset was validated without an instance
+                            repair_formset = PMSRepairPartItemFormSet(request.POST, instance=repair)
+                            if repair_formset.is_valid():
+                                repair_formset.save()
+                            else:
+                                # If validation fails, log error but don't fail the entire operation
+                                import traceback
+                                traceback.print_exc()
+                                messages.warning(request, 'PMS created but some parts may not have been saved. Please check the repair record.')
+                            
+                            # Log activity
+                            ActivityLog.objects.create(
+                                user=request.user,
+                                action='create',
+                                model_name='Repair',
+                                object_id=repair.id,
+                                description=f'Created repair record for PMS: {pms.vehicle.plate_number}',
+                                ip_address=request.META.get('REMOTE_ADDR')
+                            )
+                        
+                        # Log activity for PMS
+                        ActivityLog.objects.create(
+                            user=request.user,
+                            action='create',
+                            model_name='PMS',
+                            object_id=pms.id,
+                            description=f'Created PMS record for {pms.vehicle.plate_number} - {pms.service_type}',
+                            ip_address=request.META.get('REMOTE_ADDR')
+                        )
+                        
+                        # Clear any form errors before redirecting (they shouldn't exist if we got here)
+                        # But just to be safe, clear them explicitly
+                        if hasattr(form, '_errors'):
+                            form._errors = {}
+                        
+                        messages.success(request, 'PMS record created successfully!')
+                        return redirect('pms_list')
+                else:
+                    # Form or formset was invalid, or save didn't happen
+                    # Don't do anything here - let it fall through to error handling below
+                    pass
+            else:
+                # Form or formset validation failed - errors will be displayed in template
+                if form.errors:
+                    # Check for non-field errors (ValidationError from clean() method)
+                    if form.non_field_errors():
+                        for error in form.non_field_errors():
+                            messages.error(request, str(error))
+                    # Check for field-specific errors
+                    for field, errors in form.errors.items():
+                        if field != '__all__':
+                            for error in errors:
+                                messages.error(request, f'{field}: {error}')
+                if has_parts_data and formset.errors:
+                    for i, form_errors in enumerate(formset.errors):
+                        if form_errors:
+                            for field, errors in form_errors.items():
+                                for error in errors:
+                                    messages.error(request, f'Part form {i+1} - {field}: {error}')
+                    # Also check for non-form errors
+                    # non_form_errors is a property that returns an ErrorList
+                    try:
+                        # Access non_form_errors as a property (not a method)
+                        non_form_errors = getattr(formset, 'non_form_errors', None)
+                        if non_form_errors:
+                            # Convert to list if it's an ErrorList or other iterable
+                            if hasattr(non_form_errors, '__iter__') and not isinstance(non_form_errors, (str, bytes)):
+                                for error in non_form_errors:
+                                    messages.error(request, f'Formset error: {error}')
+                            elif isinstance(non_form_errors, str):
+                                messages.error(request, f'Formset error: {non_form_errors}')
+                    except Exception as e:
+                        # If there's an issue accessing non_form_errors, skip it silently
+                        pass
+                # Re-create formset for display with errors
+                if not form_valid:
+                    formset = PMSRepairPartItemFormSet(request.POST) if has_parts_data else PMSRepairPartItemFormSet()
+                elif has_parts_data:
+                    # Form is valid but formset failed, recreate formset with form data
+                    temp_repair = Repair()
+                    temp_repair.vehicle = form.cleaned_data.get('vehicle')
+                    formset = PMSRepairPartItemFormSet(request.POST, instance=temp_repair)
+        except (ValidationError, forms.ValidationError) as e:
             messages.error(request, str(e))
-            # Re-render the form with errors
+            # Re-render the form with errors - ensure formset is created
+            try:
+                formset
+            except NameError:
+                formset = PMSRepairPartItemFormSet(request.POST) if has_parts_data else PMSRepairPartItemFormSet()
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
+            import traceback
+            traceback.print_exc()
+            # Ensure formset is created even on exception
+            try:
+                formset
+            except NameError:
+                formset = PMSRepairPartItemFormSet(request.POST) if has_parts_data else PMSRepairPartItemFormSet()
     else:
         form = PMSForm()
         formset = PMSRepairPartItemFormSet()
@@ -1268,69 +1503,183 @@ def pms_edit(request, pk):
         form = PMSForm(request.POST, instance=pms)
         formset = PMSRepairPartItemFormSet(request.POST, instance=repair) if repair else PMSRepairPartItemFormSet(request.POST)
         
-        if form.is_valid() and formset.is_valid():
-            pms = form.save()
+        try:
+            form_valid = form.is_valid()
+            formset_valid = formset.is_valid()
             
-            # Check if user selected any parts to replace
-            has_parts = False
-            parts_cost = 0
-            
-            for part_form in formset:
-                if part_form.cleaned_data and not part_form.cleaned_data.get('DELETE', False):
-                    has_parts = True
-                    cost = part_form.cleaned_data.get('cost') or 0
-                    parts_cost += float(cost)
-            
-            # If parts were selected and no repair exists, create one
-            if has_parts and not repair:
-                # Get PMS service cost to use as labor cost
-                pms_service_cost = float(pms.cost) if pms.cost else 0
+            if form_valid and formset_valid:
+                # Save with skip_usage_validation=True since form already validated pre-inspection usage
+                pms = form.save(commit=False)
                 
-                repair = Repair.objects.create(
-                    vehicle=pms.vehicle,
-                    date_of_repair=pms.scheduled_date,
-                    description=f"PMS: {pms.service_type}",
-                    cost=parts_cost,
-                    labor_cost=pms_service_cost,
-                    repair_shop=form.cleaned_data.get('repair_shop'),
-                    technician=pms.technician,
-                    status='Completed'
-                )
-                pms.repair = repair
-                pms.save()
+                # When editing, if pre_inspection is not provided, use the existing one
+                if pms.pk and not pms.pre_inspection:
+                    # Get the existing pre_inspection from the database
+                    existing_pms = PMS.objects.get(pk=pms.pk)
+                    pms.pre_inspection = existing_pms.pre_inspection
                 
-                formset.instance = repair
-                formset.save()
+                pms.save(skip_usage_validation=True)
                 
-                # Log activity for repair
+                # Refresh repair reference after saving (in case it was updated)
+                repair = pms.repair
+                
+                # Check if user selected any parts to replace
+                has_parts = False
+                parts_cost = 0
+                
+                for part_form in formset:
+                    if part_form.cleaned_data and not part_form.cleaned_data.get('DELETE', False):
+                        has_parts = True
+                        cost = part_form.cleaned_data.get('cost') or 0
+                        try:
+                            parts_cost += float(cost)
+                        except (ValueError, TypeError):
+                            # Skip invalid cost values
+                            pass
+                
+                # If parts were selected and no repair exists, create one
+                if has_parts and not repair:
+                    # Get PMS service cost to use as labor cost
+                    pms_service_cost = float(pms.cost) if pms.cost else 0
+                    
+                    # Create repair with 'Ongoing' status initially
+                    # It will be marked as 'Completed' when post-inspection is done
+                    repair_data = {
+                        'vehicle': pms.vehicle,
+                        'date_of_repair': pms.scheduled_date,
+                        'description': f"PMS: {pms.service_type}",
+                        'cost': parts_cost,
+                        'labor_cost': pms_service_cost,
+                        'repair_shop': form.cleaned_data.get('repair_shop'),
+                        'technician': pms.technician,
+                        'status': 'Ongoing',  # Start as Ongoing, not Completed
+                    }
+                    # Only add pre_inspection if it exists and is not None
+                    if pms.pre_inspection_id:
+                        try:
+                            # Verify the pre_inspection still exists by accessing the ID
+                            pre_inspection = PreInspectionReport.objects.get(pk=pms.pre_inspection_id)
+                            repair_data['pre_inspection'] = pre_inspection
+                        except (PreInspectionReport.DoesNotExist, AttributeError):
+                            # Pre-inspection was deleted or doesn't exist, skip it
+                            pass
+                    
+                    repair = Repair.objects.create(**repair_data)
+                    # Use update() to avoid triggering model validation again
+                    # The form validation already checked everything
+                    PMS.objects.filter(pk=pms.pk).update(repair=repair)
+                    # Refresh the instance to get the updated repair
+                    pms.refresh_from_db()
+                    
+                    # Create a new formset with the repair instance to ensure proper saving
+                    repair_formset = PMSRepairPartItemFormSet(request.POST, instance=repair)
+                    if repair_formset.is_valid():
+                        repair_formset.save()
+                    else:
+                        # If validation fails, log error but don't fail the entire operation
+                        import traceback
+                        traceback.print_exc()
+                        messages.warning(request, 'PMS updated but some parts may not have been saved. Please check the repair record.')
+                    
+                    # Log activity for repair
+                    ActivityLog.objects.create(
+                        user=request.user,
+                        action='create',
+                        model_name='Repair',
+                        object_id=repair.id,
+                        description=f'Created repair record for PMS: {pms.vehicle.plate_number}',
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+                elif repair:
+                    # Update existing repair - set parts cost and labor cost
+                    try:
+                        pms_service_cost = float(pms.cost) if pms.cost else 0
+                    except (ValueError, TypeError):
+                        pms_service_cost = 0
+                    
+                    # Ensure costs don't exceed max_digits (10 digits total, 8 before decimal, 2 after)
+                    max_cost = 99999999.99
+                    if parts_cost > max_cost:
+                        messages.warning(request, f'Total parts cost ({parts_cost:.2f}) exceeds maximum allowed ({max_cost:.2f}). It will be capped at maximum.')
+                        parts_cost = max_cost
+                    if pms_service_cost > max_cost:
+                        messages.warning(request, f'Service cost ({pms_service_cost:.2f}) exceeds maximum allowed ({max_cost:.2f}). It will be capped at maximum.')
+                        pms_service_cost = max_cost
+                    
+                    repair.cost = min(parts_cost, max_cost)
+                    repair.labor_cost = min(pms_service_cost, max_cost) if pms_service_cost else 0
+                    repair.save()
+                    
+                    # Create a new formset with the repair instance to ensure proper saving
+                    repair_formset = PMSRepairPartItemFormSet(request.POST, instance=repair)
+                    if repair_formset.is_valid():
+                        repair_formset.save()
+                    else:
+                        # If validation fails, log error but don't fail the entire operation
+                        import traceback
+                        traceback.print_exc()
+                        messages.warning(request, 'PMS updated but some parts may not have been saved. Please check the repair record.')
+                
+                # Log activity for PMS
                 ActivityLog.objects.create(
                     user=request.user,
-                    action='create',
-                    model_name='Repair',
-                    object_id=repair.id,
-                    description=f'Created repair record for PMS: {pms.vehicle.plate_number}',
+                    action='update',
+                    model_name='PMS',
+                    object_id=pms.id,
+                    description=f'Updated PMS record for {pms.vehicle.plate_number} - {pms.service_type}',
                     ip_address=request.META.get('REMOTE_ADDR')
                 )
-            elif repair:
-                # Update existing repair - set parts cost and labor cost
-                pms_service_cost = float(pms.cost) if pms.cost else 0
-                repair.cost = parts_cost
-                repair.labor_cost = pms_service_cost
-                repair.save()
-                formset.save()
-            
-            # Log activity for PMS
-            ActivityLog.objects.create(
-                user=request.user,
-                action='update',
-                model_name='PMS',
-                object_id=pms.id,
-                description=f'Updated PMS record for {pms.vehicle.plate_number} - {pms.service_type}',
-                ip_address=request.META.get('REMOTE_ADDR')
-            )
-            
-            messages.success(request, 'PMS record updated successfully!')
-            return redirect('pms_list')
+                
+                messages.success(request, 'PMS record updated successfully!')
+                return redirect('pms_list')
+            else:
+                # Form or formset validation failed - errors will be displayed in template
+                if form.errors:
+                    # Check for non-field errors (ValidationError from clean() method)
+                    if form.non_field_errors():
+                        for error in form.non_field_errors():
+                            messages.error(request, str(error))
+                    # Check for field-specific errors
+                    for field, errors in form.errors.items():
+                        if field != '__all__':
+                            for error in errors:
+                                messages.error(request, f'{field}: {error}')
+                if formset.errors:
+                    for i, form_errors in enumerate(formset.errors):
+                        if form_errors:
+                            for field, errors in form_errors.items():
+                                for error in errors:
+                                    messages.error(request, f'Part form {i+1} - {field}: {error}')
+                    # Also check for non-form errors
+                    # non_form_errors is a property that returns an ErrorList
+                    try:
+                        # Access non_form_errors as a property (not a method)
+                        non_form_errors = getattr(formset, 'non_form_errors', None)
+                        if non_form_errors:
+                            # Convert to list if it's an ErrorList or other iterable
+                            if hasattr(non_form_errors, '__iter__') and not isinstance(non_form_errors, (str, bytes)):
+                                for error in non_form_errors:
+                                    messages.error(request, f'Formset error: {error}')
+                            elif isinstance(non_form_errors, str):
+                                messages.error(request, f'Formset error: {non_form_errors}')
+                    except Exception as e:
+                        # If there's an issue accessing non_form_errors, skip it silently
+                        pass
+        except (ValidationError, forms.ValidationError) as e:
+            messages.error(request, str(e))
+            # Re-render the form with errors - ensure formset is created
+            try:
+                formset
+            except NameError:
+                formset = PMSRepairPartItemFormSet(request.POST, instance=repair) if repair else PMSRepairPartItemFormSet(request.POST)
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            import traceback
+            traceback.print_exc()
+            # Ensure formset is created even on exception
+            try:
+                formset
+            except NameError:
+                formset = PMSRepairPartItemFormSet(request.POST, instance=repair) if repair else PMSRepairPartItemFormSet(request.POST)
     else:
         form = PMSForm(instance=pms)
         if repair:
@@ -1459,7 +1808,27 @@ def pre_inspection_create(request):
         form = PreInspectionReportForm(request.POST, request.FILES)
         if form.is_valid():
             report = form.save(commit=False)
-            report.inspected_by = request.user
+            # Always set inspected_by to current user (or use form value if provided)
+            if not report.inspected_by:
+                report.inspected_by = request.user
+            
+            # Handle multiple driver report attachments
+            attachments_list = []
+            if 'driver_report_attachments' in request.FILES:
+                attachments_list = [f for f in request.FILES.getlist('driver_report_attachments')]
+            # Also check for legacy 'driver_report_attachment' field
+            if 'driver_report_attachment' in request.FILES:
+                attachments_list.extend([f for f in request.FILES.getlist('driver_report_attachment')])
+            
+            if attachments_list:
+                from django.core.files.storage import default_storage
+                attachment_paths = []
+                for attachment in attachments_list:
+                    if attachment:
+                        path = default_storage.save(f'pre_inspection/driver_reports/{attachment.name}', attachment)
+                        attachment_paths.append(path)
+                report.driver_report_attachments = attachment_paths
+            
             report.save()
             
             # Log activity
@@ -1497,7 +1866,42 @@ def pre_inspection_edit(request, pk):
     if request.method == 'POST':
         form = PreInspectionReportForm(request.POST, request.FILES, instance=report)
         if form.is_valid():
-            form.save()
+            report = form.save(commit=False)
+            
+            # Ensure inspected_by is always set
+            # If editing, preserve existing inspected_by if it exists, otherwise use form value or current user
+            if report.pk:
+                # Get existing inspected_by from database
+                existing_report = PreInspectionReport.objects.get(pk=report.pk)
+                # Use existing value if form didn't provide one, otherwise use form value
+                if not report.inspected_by:
+                    report.inspected_by = existing_report.inspected_by or request.user
+            else:
+                # New record - use form value or current user
+                if not report.inspected_by:
+                    report.inspected_by = request.user
+            
+            # Get existing attachments
+            existing_attachments = report.driver_report_attachments if report.driver_report_attachments else []
+            
+            # Handle multiple driver report attachments
+            attachments_list = []
+            if 'driver_report_attachments' in request.FILES:
+                attachments_list = [f for f in request.FILES.getlist('driver_report_attachments')]
+            # Also check for legacy 'driver_report_attachment' field
+            if 'driver_report_attachment' in request.FILES:
+                attachments_list.extend([f for f in request.FILES.getlist('driver_report_attachment')])
+            
+            if attachments_list:
+                from django.core.files.storage import default_storage
+                attachment_paths = existing_attachments.copy()
+                for attachment in attachments_list:
+                    if attachment:
+                        path = default_storage.save(f'pre_inspection/driver_reports/{attachment.name}', attachment)
+                        attachment_paths.append(path)
+                report.driver_report_attachments = attachment_paths
+            
+            report.save()
             
             # Log activity
             ActivityLog.objects.create(
@@ -1661,7 +2065,9 @@ def post_inspection_create(request):
         form = PostInspectionReportForm(request.POST, request.FILES)
         if form.is_valid():
             report = form.save(commit=False)
-            report.inspected_by = request.user
+            # Always set inspected_by to current user (or use form value if provided)
+            if not report.inspected_by:
+                report.inspected_by = request.user
             
             report.save()  # Save first to ensure we have an ID and can access vehicle
             
@@ -1771,7 +2177,12 @@ def post_inspection_create(request):
                 form.fields['pre_inspection'].initial = pms.pre_inspection
                 # Filter pre-inspection to only show the PMS's pre-inspection
                 if pms.pre_inspection:
-                    form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=pms.pre_inspection.pk)
+                    try:
+                        form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=pms.pre_inspection.pk)
+                    except PreInspectionReport.DoesNotExist:
+                        # Pre-inspection was deleted, allow selecting any approved pre-inspection
+                        form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(is_approved=True)
+                        form.fields['pre_inspection'].initial = None
             except PMS.DoesNotExist:
                 pass
     
@@ -1795,6 +2206,19 @@ def post_inspection_edit(request, pk):
         if form.is_valid():
             # Save form data first (without replaced_parts_images since we handle it manually)
             report = form.save(commit=False)
+            
+            # Ensure inspected_by is always set
+            # If editing, preserve existing inspected_by if it exists, otherwise use form value or current user
+            if report.pk:
+                # Get existing inspected_by from database
+                existing_report = PostInspectionReport.objects.get(pk=report.pk)
+                # Use existing value if form didn't provide one, otherwise use form value
+                if not report.inspected_by:
+                    report.inspected_by = existing_report.inspected_by or request.user
+            else:
+                # New record - use form value or current user
+                if not report.inspected_by:
+                    report.inspected_by = request.user
             
             # Handle multiple image uploads - append to existing images
             uploaded_images = request.FILES.getlist('replaced_parts_images')

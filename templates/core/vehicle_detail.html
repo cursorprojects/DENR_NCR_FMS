@@ -23,13 +23,31 @@
 
 <div class="row mb-4">
     <div class="col-md-4">
-        {% if vehicle.photo %}
-        <img src="{{ vehicle.photo.url }}" class="img-fluid rounded" alt="Vehicle Photo">
+        {% if vehicle.photos %}
+            <div id="vehiclePhotosCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {% for photo_path in vehicle.photos %}
+                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                            <img src="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ photo_path }}{% else %}/media/{{ photo_path }}{% endif %}" class="d-block w-100 img-fluid rounded" alt="Vehicle Photo">
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if vehicle.photos|length > 1 %}
+                    <button class="carousel-control-prev" type="button" data-bs-target="#vehiclePhotosCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#vehiclePhotosCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                {% endif %}
+            </div>
         {% else %}
-        <div class="bg-light p-5 text-center rounded">
-            <i class="bi bi-car-front" style="font-size: 5rem;"></i>
-            <p class="mt-3">No photo available</p>
-        </div>
+            <div class="bg-light p-5 text-center rounded">
+                <i class="bi bi-car-front" style="font-size: 5rem;"></i>
+                <p class="mt-3">No photo available</p>
+            </div>
         {% endif %}
     </div>
     <div class="col-md-8">
@@ -135,14 +153,20 @@
                     {% endif %}
                 </div>
                 {% endif %}
-                {% if vehicle.registration_document %}
+                {% if vehicle.registration_documents %}
                 <hr>
                 <div class="row">
-                    <div class="col-md-6 mb-2">
-                        <strong>Registration:</strong>
-                        <a href="{{ vehicle.registration_document.url }}" target="_blank" class="btn btn-sm btn-info">
-                            <i class="bi bi-file-earmark-pdf"></i> View Document
-                        </a>
+                    <div class="col-md-12 mb-2">
+                        <strong>Registration Documents:</strong>
+                        <ul class="list-unstyled mt-2">
+                            {% for doc_path in vehicle.registration_documents %}
+                                <li class="mb-1">
+                                    <a href="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ doc_path }}{% else %}/media/{{ doc_path }}{% endif %}" target="_blank" class="btn btn-sm btn-info">
+                                        <i class="bi bi-file-earmark"></i> View Document {{ forloop.counter }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
                     </div>
                 </div>
                 {% endif %}

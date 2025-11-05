@@ -21,6 +21,10 @@
                             <h5><i class="bi bi-car-front"></i> Vehicle Information</h5>
                             <table class="table table-sm">
                                 <tr>
+                                    <td><strong>Inspection Report Number:</strong></td>
+                                    <td>PRE-{{ report.pk|stringformat:"05d" }}</td>
+                                </tr>
+                                <tr>
                                     <td><strong>Vehicle:</strong></td>
                                     <td>{{ report.vehicle.plate_number }} - {{ report.vehicle.brand }} {{ report.vehicle.model }}</td>
                                 </tr>
@@ -34,7 +38,17 @@
                                 </tr>
                                 <tr>
                                     <td><strong>Inspected By:</strong></td>
-                                    <td>{{ report.inspected_by.get_full_name }}</td>
+                                    <td>
+                                        {% if report.inspected_by %}
+                                            {% if report.inspected_by.get_full_name %}
+                                                {{ report.inspected_by.get_full_name }}
+                                            {% else %}
+                                                {{ report.inspected_by.username|title }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Not specified</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             </table>
                         </div>
@@ -44,8 +58,15 @@
                                 <tr>
                                     <td><strong>Overall Condition:</strong></td>
                                     <td>
-                                        <span class="badge condition-{{ report.overall_condition }}">
-                                            {{ report.get_overall_condition_display }}
+                                        <span class="badge condition-{{ report.overall_condition }}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                            <strong>
+                                                {% if report.overall_condition == 'excellent' %}Excellent
+                                                {% elif report.overall_condition == 'good' %}Good
+                                                {% elif report.overall_condition == 'fair' %}Fair
+                                                {% elif report.overall_condition == 'poor' %}Poor
+                                                {% elif report.overall_condition == 'critical' %}Critical
+                                                {% else %}{{ report.overall_condition|title }}{% endif %}
+                                            </strong>
                                         </span>
                                     </td>
                                 </tr>
@@ -163,17 +184,93 @@
                     </div>
                     {% endif %}
 
+                    <!-- Attachments -->
+                    {% if report.driver_report_attachments %}
+                    <h5 class="mb-3"><i class="bi bi-paperclip"></i> Attachments</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header bg-info bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-file-earmark"></i> Driver Report Attachments</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-unstyled">
+                                        {% for attachment_path in report.driver_report_attachments %}
+                                            <li class="mb-2">
+                                                <a href="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ attachment_path }}{% else %}/media/{{ attachment_path }}{% endif %}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-file-earmark"></i> View Attachment {{ forloop.counter }}
+                                                </a>
+                                                <span class="ms-2 text-muted">{{ attachment_path|truncatechars:50 }}</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Approval Status -->
+                    {% if report.is_approved %}
+                    <h5 class="mb-3"><i class="bi bi-check-circle"></i> Approval Status</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card border-success">
+                                <div class="card-header bg-success bg-opacity-25">
+                                    <h6 class="mb-0"><i class="bi bi-check-circle"></i> Already Approved</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Approved By:</strong> 
+                                            {% if report.approved_by %}
+                                                {% if report.approved_by.get_full_name %}
+                                                    {{ report.approved_by.get_full_name }}
+                                                {% else %}
+                                                    {{ report.approved_by.username|title }}
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Not specified</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Approval Date:</strong> 
+                                            {% if report.approval_date %}
+                                                {{ report.approval_date|date:"M d, Y g:i A" }}
+                                            {% else %}
+                                                <span class="text-muted">Not specified</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if report.approval_notes %}
+                                        <div class="col-md-12 mt-2">
+                                            <strong>Approval Notes:</strong><br>
+                                            {{ report.approval_notes|linebreaks }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Approval Form -->
                     <div class="card border-success">
                         <div class="card-header bg-success bg-opacity-25">
                             <h5 class="mb-0"><i class="bi bi-check-circle"></i> Approval</h5>
                         </div>
                         <div class="card-body">
+                            {% if report.is_approved %}
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <strong>Note:</strong> This report is already approved. Submitting this form will update the approval information.
+                                </div>
+                            {% endif %}
                             <form method="post">
                                 {% csrf_token %}
                                 <div class="mb-3">
                                     <label for="approval_notes" class="form-label">Approval Notes</label>
-                                    <textarea class="form-control" id="approval_notes" name="approval_notes" rows="3" placeholder="Add any notes about this approval..."></textarea>
+                                    <textarea class="form-control" id="approval_notes" name="approval_notes" rows="3" placeholder="Add any notes about this approval...">{% if report.approval_notes %}{{ report.approval_notes }}{% endif %}</textarea>
                                     <div class="form-text">Optional notes about the approval decision.</div>
                                 </div>
                                 
@@ -187,7 +284,7 @@
                                         <i class="bi bi-x-circle"></i> Cancel
                                     </a>
                                     <button type="submit" class="btn btn-success">
-                                        <i class="bi bi-check-circle"></i> Approve Report
+                                        <i class="bi bi-check-circle"></i> {% if report.is_approved %}Update Approval{% else %}Approve Report{% endif %}
                                     </button>
                                 </div>
                             </form>

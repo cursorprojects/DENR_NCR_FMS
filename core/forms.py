@@ -14,7 +14,7 @@ class VehicleForm(forms.ModelForm):
             'engine_number', 'chassis_number', 'color', 'acquisition_cost',
             'current_market_value', 'division', 'assigned_driver', 'status', 'date_acquired',
             'current_mileage', 'rfid_autosweep_number', 'rfid_easytrip_number', 'fleet_card_number',
-            'gas_station', 'photo', 'registration_document', 'notes'
+            'gas_station', 'notes'
         ]
         widgets = {
             'plate_number': forms.TextInput(attrs={'class': 'form-control'}),
@@ -36,8 +36,6 @@ class VehicleForm(forms.ModelForm):
             'rfid_easytrip_number': forms.TextInput(attrs={'class': 'form-control'}),
             'fleet_card_number': forms.TextInput(attrs={'class': 'form-control'}),
             'gas_station': forms.TextInput(attrs={'class': 'form-control'}),
-            'photo': forms.FileInput(attrs={'class': 'form-control'}),
-            'registration_document': forms.FileInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
@@ -83,10 +81,41 @@ class RepairPartItemForm(forms.ModelForm):
         self.fields['part'].queryset = RepairPart.objects.filter(is_active=True)
         self.fields['part'].empty_label = "Select a part..."
         self.fields['part'].label = "Part"
+        # Make part not required at form level - formset will handle empty forms
+        self.fields['part'].required = False
         
         # If editing, populate the unit field
         if self.instance and self.instance.pk and self.instance.unit:
             self.fields['unit'].initial = self.instance.unit
+    
+    def clean_cost(self):
+        cost = self.cleaned_data.get('cost')
+        if cost is not None:
+            # Check if cost exceeds max_digits=10, decimal_places=2
+            # This means max value is 99999999.99 (8 digits before decimal, 2 after)
+            max_cost = 99999999.99
+            try:
+                cost_float = float(cost)
+                if cost_float > max_cost:
+                    raise forms.ValidationError(
+                        f'Cost cannot exceed {max_cost:,.2f}. Please enter a smaller amount.'
+                    )
+            except (ValueError, TypeError):
+                # If cost is not a valid number, Django's DecimalField will handle it
+                pass
+        return cost
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        # If part is selected, ensure related fields are valid
+        # But if no part is selected, allow empty form (will be marked for deletion)
+        part = cleaned_data.get('part')
+        if not part:
+            # Empty form - all fields should be empty or ignored
+            return cleaned_data
+        
+        # If part is selected, validate other fields as needed
+        return cleaned_data
 
 
 # Create formset factory for Repair
@@ -106,7 +135,9 @@ PMSRepairPartItemFormSet = inlineformset_factory(
     form=RepairPartItemForm,
     extra=1,  # Start with 1 empty form for convenience
     can_delete=True,
-    can_delete_extra=False
+    can_delete_extra=False,
+    min_num=0,  # Allow zero forms (all parts optional)
+    validate_min=False  # Don't validate minimum on formset level
 )
 
 
@@ -229,8 +260,8 @@ class RepairForm(forms.ModelForm):
             
             if existing_pms:
                 raise forms.ValidationError(
-                    f"This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
-                    "Each pre-inspection report can only be used once."
+                    f"[REPAIR FORM VALIDATION] This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                    f"Existing PMS ID: {existing_pms.pk}. Each pre-inspection report can only be used once."
                 )
         
         # Check if post-inspection vehicle matches repair vehicle (if post_inspection exists)
@@ -359,12 +390,25 @@ class PMSForm(forms.ModelForm):
         if self.instance.pk and self.instance.vehicle:
             base_queryset = base_queryset.filter(vehicle=self.instance.vehicle)
         
+        # When editing, ensure the current pre_inspection is in the queryset even if it's already used
+        if self.instance.pk and self.instance.pre_inspection:
+            current_pre_inspection = self.instance.pre_inspection
+            # Add current pre_inspection to queryset if it's not already there
+            if current_pre_inspection.pk not in [p.pk for p in base_queryset]:
+                from django.db.models import Q
+                base_queryset = base_queryset | PreInspectionReport.objects.filter(pk=current_pre_inspection.pk)
+        
         self.fields['pre_inspection'].queryset = base_queryset.order_by('-inspection_date')
         self.fields['pre_inspection'].empty_label = "Select an approved pre-inspection report..."
-        self.fields['pre_inspection'].required = True
         
-        # Add help text
-        self.fields['pre_inspection'].help_text = "Required: Select an approved pre-inspection report for PMS (can only be used once)"
+        # When editing, pre_inspection is not required (it's already set)
+        # When creating, pre_inspection is required
+        if self.instance.pk:
+            self.fields['pre_inspection'].required = False
+            self.fields['pre_inspection'].help_text = "Optional: Select an approved pre-inspection report for PMS (can only be used once). Current pre-inspection will be used if not changed."
+        else:
+            self.fields['pre_inspection'].required = True
+            self.fields['pre_inspection'].help_text = "Required: Select an approved pre-inspection report for PMS (can only be used once)"
         
         # Disable status field if PMS is completed or if no post-inspection exists
         if self.instance.pk:
@@ -423,8 +467,45 @@ class PMSForm(forms.ModelForm):
                 )
             
             # Check if pre-inspection is already used by another repair or PMS
-            existing_repair = Repair.objects.filter(pre_inspection=pre_inspection).first()
-            existing_pms = PMS.objects.filter(pre_inspection=pre_inspection).exclude(pk=self.instance.pk if self.instance.pk else None).first()
+            # Logic: 
+            # - A repair created from a PMS can share the same pre_inspection (that's OK)
+            # - But a standalone repair or another PMS cannot use it
+            # - When editing, exclude repairs created from this PMS
+            
+            # Check for standalone repairs (not linked to any PMS) using this pre_inspection
+            standalone_repairs = Repair.objects.filter(
+                pre_inspection=pre_inspection,
+                pms_records__isnull=True
+            )
+            # If editing, also exclude repairs created from this PMS
+            if self.instance and self.instance.pk and self.instance.repair:
+                standalone_repairs = standalone_repairs.exclude(pk=self.instance.repair.pk)
+            existing_repair = standalone_repairs.first()
+            
+            # Check for other PMS records using this pre_inspection
+            # Exclude current instance if it has a pk (editing existing PMS)
+            # For new PMS creation, self.instance.pk will be None
+            current_pk = getattr(self.instance, 'pk', None)
+            current_vehicle = cleaned_data.get('vehicle') or (getattr(self.instance, 'vehicle', None) if self.instance else None)
+            
+            # Query for PMS records using this pre_inspection
+            # IMPORTANT: Only check for PMS records that are NOT the current instance
+            # Use select_related to avoid extra queries
+            pms_query = PMS.objects.filter(pre_inspection=pre_inspection).select_related('vehicle')
+            
+            # If we have a pk (editing), exclude this instance from the query
+            # This is critical - without this, we'd find ourselves when editing
+            if current_pk is not None:
+                pms_query = pms_query.exclude(pk=current_pk)
+            
+            # Get all matching PMS records to check
+            existing_pms_list = list(pms_query)
+            
+            # Filter out any PMS that might be the current instance (extra safety check)
+            # CRITICAL: For new PMS creation (current_pk is None), we should not find any conflicts
+            # because the PMS doesn't exist yet. But if we do find one, it's a real conflict.
+            if current_pk is not None:
+                existing_pms_list = [p for p in existing_pms_list if p.pk != current_pk]
             
             if existing_repair:
                 raise forms.ValidationError(
@@ -432,11 +513,39 @@ class PMSForm(forms.ModelForm):
                     "Each pre-inspection report can only be used once."
                 )
             
-            if existing_pms:
-                raise forms.ValidationError(
-                    f"This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
-                    "Each pre-inspection report can only be used once."
-                )
+            if existing_pms_list:
+                # Found other PMS records using this pre_inspection
+                # Get the first one for the error message
+                existing_pms = existing_pms_list[0]
+                found_pk = getattr(existing_pms, 'pk', None)
+                
+                # DEBUG: Log what we found
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.debug(f"PMSForm.clean(): Found existing_pms_list: {[p.pk for p in existing_pms_list]}")
+                logger.debug(f"PMSForm.clean(): current_pk={current_pk}, found_pk={found_pk}")
+                
+                # FINAL CHECK: For new PMS (current_pk is None), any found PMS is a conflict
+                # For existing PMS (current_pk is not None), ensure we're not comparing against ourselves
+                if current_pk is None:
+                    # New PMS creation - if we find any existing PMS, it's a conflict
+                    logger.warning(f"PMSForm.clean(): Raising ValidationError for new PMS - found existing PMS {found_pk}")
+                    raise forms.ValidationError(
+                        f"[FORM VALIDATION] This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                        f"Existing PMS ID: {found_pk}. Each pre-inspection report can only be used once."
+                    )
+                elif found_pk == current_pk:
+                    # This shouldn't happen - we excluded it in the query and filtered it out
+                    # Skip the error as this indicates a bug
+                    logger.warning(f"PMSForm.clean(): Found self in existing_pms_list! This is a bug. current_pk={current_pk}, found_pk={found_pk}")
+                    pass
+                else:
+                    # This is a different PMS - valid conflict
+                    logger.warning(f"PMSForm.clean(): Raising ValidationError for edit - found different PMS {found_pk}")
+                    raise forms.ValidationError(
+                        f"[FORM VALIDATION] This pre-inspection report is already used by PMS record for vehicle {existing_pms.vehicle.plate_number}. "
+                        f"Existing PMS ID: {found_pk}. Each pre-inspection report can only be used once."
+                    )
         
         # Check if post-inspection vehicle matches PMS vehicle (if post_inspection exists)
         if self.instance.pk and self.instance.post_inspection:
@@ -584,7 +693,7 @@ class PreInspectionReportForm(forms.ModelForm):
             'engine_condition', 'transmission_condition', 'brakes_condition',
             'suspension_condition', 'electrical_condition', 'body_condition',
             'tires_condition', 'lights_condition', 'current_mileage', 'fuel_level',
-            'issues_found', 'safety_concerns', 'recommended_actions', 'driver_report_attachment'
+            'issues_found', 'safety_concerns', 'recommended_actions'
         ]
         widgets = {
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
@@ -603,7 +712,6 @@ class PreInspectionReportForm(forms.ModelForm):
             'issues_found': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'safety_concerns': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'recommended_actions': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'driver_report_attachment': forms.FileInput(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -614,6 +722,9 @@ class PreInspectionReportForm(forms.ModelForm):
                           'tires_condition', 'lights_condition']:
             if not self.instance.pk:  # Only for new instances
                 self.fields[field_name].initial = 'good'
+        
+        # Ensure inspected_by is required
+        self.fields['inspected_by'].required = True
 
 
 class PostInspectionReportForm(forms.ModelForm):
@@ -671,6 +782,9 @@ class PostInspectionReportForm(forms.ModelForm):
                           'tires_condition', 'lights_condition']:
             if not self.instance.pk:  # Only for new instances
                 self.fields[field_name].initial = 'good'
+        
+        # Ensure inspected_by is required
+        self.fields['inspected_by'].required = True
         
         # Set default values for satisfaction fields
         for field_name in ['quality_of_work', 'timeliness', 'cleanliness']:
