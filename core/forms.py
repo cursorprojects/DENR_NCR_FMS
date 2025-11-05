@@ -584,7 +584,7 @@ class PreInspectionReportForm(forms.ModelForm):
             'engine_condition', 'transmission_condition', 'brakes_condition',
             'suspension_condition', 'electrical_condition', 'body_condition',
             'tires_condition', 'lights_condition', 'current_mileage', 'fuel_level',
-            'issues_found', 'safety_concerns', 'recommended_actions'
+            'issues_found', 'safety_concerns', 'recommended_actions', 'driver_report_attachment'
         ]
         widgets = {
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
@@ -603,6 +603,7 @@ class PreInspectionReportForm(forms.ModelForm):
             'issues_found': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'safety_concerns': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'recommended_actions': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'driver_report_attachment': forms.FileInput(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -651,6 +652,16 @@ class PostInspectionReportForm(forms.ModelForm):
             'future_recommendations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'warranty_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
+    
+    # Custom field for multiple image uploads
+    replaced_parts_images = forms.FileField(
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*',
+        }),
+        required=False,
+        help_text="Upload multiple images of replaced parts (JPG, PNG, etc.)"
+    )
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

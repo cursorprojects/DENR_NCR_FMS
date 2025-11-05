@@ -665,6 +665,9 @@ class PreInspectionReport(models.Model):
     # Photos
     photos = models.JSONField(default=list, blank=True, help_text="List of photo file paths")
     
+    # Driver report attachment
+    driver_report_attachment = models.FileField(upload_to='pre_inspection/driver_reports/', blank=True, null=True, help_text="Driver report attachment")
+    
     # Approval
     approved_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_pre_inspections')
     approval_date = models.DateTimeField(null=True, blank=True)
@@ -781,6 +784,25 @@ class PostInspectionReport(models.Model):
     
     # Photos
     photos = models.JSONField(default=list, blank=True, help_text="List of photo file paths")
+    
+    # Replaced parts images attachment (multiple images)
+    replaced_parts_images = models.JSONField(default=list, blank=True, null=True, help_text="List of replaced parts image file paths")
+    
+    def get_replaced_parts_images_list(self):
+        """Safely get replaced_parts_images as a list"""
+        if self.replaced_parts_images is None:
+            return []
+        if isinstance(self.replaced_parts_images, list):
+            return self.replaced_parts_images
+        # Try to parse if it's a string
+        if isinstance(self.replaced_parts_images, str):
+            try:
+                import json
+                parsed = json.loads(self.replaced_parts_images)
+                return parsed if isinstance(parsed, list) else []
+            except:
+                return []
+        return []
     
     # Final approval
     approved_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_post_inspections')

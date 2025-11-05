@@ -21,134 +21,156 @@ User = get_user_model()
 
 @login_required
 def dashboard(request):
-    # Total vehicles
-    total_vehicles = Vehicle.objects.count()
-    
-    # Status counts
-    operational = Vehicle.objects.filter(status='Serviceable').count()
-    under_repair = Vehicle.objects.filter(status='Under Repair').count()
-    non_operational = Vehicle.objects.filter(status='Unserviceable').count()
-    
-    # Vehicles breakdown by type for all statuses
-    total_by_type = Vehicle.objects.values('vehicle_type').annotate(count=Count('id')).order_by('-count')
-    total_type_breakdown = {item['vehicle_type']: item['count'] for item in total_by_type}
-    
-    serviceable_by_type = Vehicle.objects.filter(status='Serviceable').values('vehicle_type').annotate(count=Count('id')).order_by('-count')
-    serviceable_type_breakdown = {item['vehicle_type']: item['count'] for item in serviceable_by_type}
-    
-    under_repair_by_type = Vehicle.objects.filter(status='Under Repair').values('vehicle_type').annotate(count=Count('id')).order_by('-count')
-    under_repair_type_breakdown = {item['vehicle_type']: item['count'] for item in under_repair_by_type}
-    
-    non_operational_by_type = Vehicle.objects.filter(status='Unserviceable').values('vehicle_type').annotate(count=Count('id')).order_by('-count')
-    non_operational_type_breakdown = {item['vehicle_type']: item['count'] for item in non_operational_by_type}
-    
-    # Repair costs
-    current_month = timezone.now().month
-    current_year = timezone.now().year
-    
-    monthly_cost = Repair.objects.filter(
-        date_of_repair__month=current_month,
-        date_of_repair__year=current_year,
-        status='Completed'
-    ).aggregate(total=Sum('cost'))['total'] or 0
-    
-    yearly_cost = Repair.objects.filter(
-        date_of_repair__year=current_year,
-        status='Completed'
-    ).aggregate(total=Sum('cost'))['total'] or 0
-    
-    # Recent repairs
-    recent_repairs = Repair.objects.all()[:5]
-    
-    # Vehicles near PMS (check for scheduled PMS within 1 month)
-    from datetime import timedelta
-    from dateutil.relativedelta import relativedelta
-    today = timezone.now().date()
-    one_month_from_now = today + relativedelta(months=1)
-    
-    vehicles_near_pms = []
-    all_vehicles = Vehicle.objects.filter(status='Serviceable')
-    
-    for vehicle in all_vehicles:
-        # Check for overdue PMS first (highest priority)
-        overdue_pms = PMS.objects.filter(
-            vehicle=vehicle,
-            status__in=['Scheduled', 'Overdue'],
-            scheduled_date__lt=today
-        ).order_by('scheduled_date').first()
+    try:
+        # Total vehicles
+        total_vehicles = Vehicle.objects.count()
         
-        needs_pms = False
-        reason = ""
-        scheduled_date = None
-        days_until = None
-        pms_record = None
+        # Status counts
+        operational = Vehicle.objects.filter(status='Serviceable').count()
+        under_repair = Vehicle.objects.filter(status='Under Repair').count()
+        non_operational = Vehicle.objects.filter(status='Unserviceable').count()
         
-        if overdue_pms:
-            # Found an overdue PMS - show this first (highest priority)
-            needs_pms = True
-            pms_record = overdue_pms
-            scheduled_date = overdue_pms.scheduled_date
-            days_overdue = (today - scheduled_date).days
-            reason = f"PMS overdue by {days_overdue} day{'s' if days_overdue != 1 else ''} ({scheduled_date.strftime('%b %d, %Y')})"
-        else:
-            # Get upcoming scheduled PMS records that are within 1 month
-            upcoming_pms = PMS.objects.filter(
+        # Vehicles breakdown by type for all statuses
+        total_by_type = Vehicle.objects.values('vehicle_type').annotate(count=Count('id')).order_by('-count')
+        total_type_breakdown = {item['vehicle_type']: item['count'] for item in total_by_type}
+        
+        serviceable_by_type = Vehicle.objects.filter(status='Serviceable').values('vehicle_type').annotate(count=Count('id')).order_by('-count')
+        serviceable_type_breakdown = {item['vehicle_type']: item['count'] for item in serviceable_by_type}
+        
+        under_repair_by_type = Vehicle.objects.filter(status='Under Repair').values('vehicle_type').annotate(count=Count('id')).order_by('-count')
+        under_repair_type_breakdown = {item['vehicle_type']: item['count'] for item in under_repair_by_type}
+        
+        non_operational_by_type = Vehicle.objects.filter(status='Unserviceable').values('vehicle_type').annotate(count=Count('id')).order_by('-count')
+        non_operational_type_breakdown = {item['vehicle_type']: item['count'] for item in non_operational_by_type}
+        
+        # Repair costs
+        current_month = timezone.now().month
+        current_year = timezone.now().year
+        
+        monthly_cost = Repair.objects.filter(
+            date_of_repair__month=current_month,
+            date_of_repair__year=current_year,
+            status='Completed'
+        ).aggregate(total=Sum('cost'))['total'] or 0
+        
+        yearly_cost = Repair.objects.filter(
+            date_of_repair__year=current_year,
+            status='Completed'
+        ).aggregate(total=Sum('cost'))['total'] or 0
+        
+        # Recent repairs
+        recent_repairs = Repair.objects.all()[:5]
+        
+        # Vehicles near PMS (check for scheduled PMS within 1 month)
+        from datetime import timedelta
+        from dateutil.relativedelta import relativedelta
+        today = timezone.now().date()
+        one_month_from_now = today + relativedelta(months=1)
+        
+        vehicles_near_pms = []
+        all_vehicles = Vehicle.objects.filter(status='Serviceable')
+        
+        for vehicle in all_vehicles:
+            # Check for overdue PMS first (highest priority)
+            overdue_pms = PMS.objects.filter(
                 vehicle=vehicle,
                 status__in=['Scheduled', 'Overdue'],
-                scheduled_date__gte=today,
-                scheduled_date__lte=one_month_from_now
+                scheduled_date__lt=today
             ).order_by('scheduled_date').first()
             
-            if upcoming_pms:
-                # Found a scheduled PMS within 1 month
+            needs_pms = False
+            reason = ""
+            scheduled_date = None
+            days_until = None
+            pms_record = None
+            
+            if overdue_pms:
+                # Found an overdue PMS - show this first (highest priority)
                 needs_pms = True
-                pms_record = upcoming_pms
-                scheduled_date = upcoming_pms.scheduled_date
-                days_until = (scheduled_date - today).days
-                if days_until == 0:
-                    reason = "PMS scheduled today"
-                elif days_until == 1:
-                    reason = "PMS scheduled tomorrow"
-                else:
-                    reason = f"PMS scheduled in {days_until} days ({scheduled_date.strftime('%b %d, %Y')})"
+                pms_record = overdue_pms
+                scheduled_date = overdue_pms.scheduled_date
+                days_overdue = (today - scheduled_date).days
+                reason = f"PMS overdue by {days_overdue} day{'s' if days_overdue != 1 else ''} ({scheduled_date.strftime('%b %d, %Y')})"
+            else:
+                # Get upcoming scheduled PMS records that are within 1 month
+                upcoming_pms = PMS.objects.filter(
+                    vehicle=vehicle,
+                    status__in=['Scheduled', 'Overdue'],
+                    scheduled_date__gte=today,
+                    scheduled_date__lte=one_month_from_now
+                ).order_by('scheduled_date').first()
+                
+                if upcoming_pms:
+                    # Found a scheduled PMS within 1 month
+                    needs_pms = True
+                    pms_record = upcoming_pms
+                    scheduled_date = upcoming_pms.scheduled_date
+                    days_until = (scheduled_date - today).days
+                    if days_until == 0:
+                        reason = "PMS scheduled today"
+                    elif days_until == 1:
+                        reason = "PMS scheduled tomorrow"
+                    else:
+                        reason = f"PMS scheduled in {days_until} days ({scheduled_date.strftime('%b %d, %Y')})"
+            
+            if needs_pms:
+                vehicles_near_pms.append({
+                    'vehicle': vehicle,
+                    'reason': reason,
+                    'scheduled_date': scheduled_date,
+                    'days_until': days_until,
+                    'days_overdue': (today - scheduled_date).days if scheduled_date and scheduled_date < today else None,
+                    'pms_record': pms_record
+                })
         
-        if needs_pms:
-            vehicles_near_pms.append({
-                'vehicle': vehicle,
-                'reason': reason,
-                'scheduled_date': scheduled_date,
-                'days_until': days_until,
-                'days_overdue': (today - scheduled_date).days if scheduled_date and scheduled_date < today else None,
-                'pms_record': pms_record
-            })
-    
-    # Sort by urgency (overdue first, then by scheduled date - earliest first)
-    vehicles_near_pms.sort(key=lambda x: (
-        1 if x['days_overdue'] is not None else 0,  # Overdue first
-        x['scheduled_date'] if x['scheduled_date'] else timezone.now().date()  # Earliest scheduled date first
-    ))
-    
-    # Take top 5
-    vehicles_near_pms = vehicles_near_pms[:5]
-    
-    # Note: unread_notifications and unread_count are now provided by context processor
-    
-    context = {
-        'total_vehicles': total_vehicles,
-        'operational': operational,
-        'under_repair': under_repair,
-        'non_operational': non_operational,
-        'total_type_breakdown': total_type_breakdown,
-        'serviceable_type_breakdown': serviceable_type_breakdown,
-        'under_repair_type_breakdown': under_repair_type_breakdown,
-        'non_operational_type_breakdown': non_operational_type_breakdown,
-        'monthly_cost': monthly_cost,
-        'yearly_cost': yearly_cost,
-        'recent_repairs': recent_repairs,
-        'vehicles_near_pms': vehicles_near_pms,
-    }
-    
-    return render(request, 'core/dashboard.html', context)
+        # Sort by urgency (overdue first, then by scheduled date - earliest first)
+        vehicles_near_pms.sort(key=lambda x: (
+            1 if x['days_overdue'] is not None else 0,  # Overdue first
+            x['scheduled_date'] if x['scheduled_date'] else timezone.now().date()  # Earliest scheduled date first
+        ))
+        
+        # Take top 5
+        vehicles_near_pms = vehicles_near_pms[:5]
+        
+        # Note: unread_notifications and unread_count are now provided by context processor
+        
+        context = {
+            'total_vehicles': total_vehicles,
+            'operational': operational,
+            'under_repair': under_repair,
+            'non_operational': non_operational,
+            'total_type_breakdown': total_type_breakdown,
+            'serviceable_type_breakdown': serviceable_type_breakdown,
+            'under_repair_type_breakdown': under_repair_type_breakdown,
+            'non_operational_type_breakdown': non_operational_type_breakdown,
+            'monthly_cost': monthly_cost,
+            'yearly_cost': yearly_cost,
+            'recent_repairs': recent_repairs,
+            'vehicles_near_pms': vehicles_near_pms,
+        }
+        
+        return render(request, 'core/dashboard.html', context)
+    except Exception as e:
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
+        error_message = str(e)
+        error_traceback = traceback.format_exc()
+        logger.error(f"Dashboard error: {error_message}\n{error_traceback}")
+        
+        # Return error page with details if DEBUG is True
+        from django.conf import settings
+        if settings.DEBUG:
+            from django.http import HttpResponse
+            return HttpResponse(f"""
+                <h1>Dashboard Error</h1>
+                <h2>Error: {error_message}</h2>
+                <pre style="background: #f5f5f5; padding: 20px; overflow: auto;">{error_traceback}</pre>
+                <p><a href="/">Go back</a></p>
+            """, content_type='text/html', status=500)
+        else:
+            messages.error(request, f'An error occurred: {error_message}')
+            return redirect('login')
 
 
 @login_required
@@ -1434,7 +1456,7 @@ def pre_inspection_list(request):
 def pre_inspection_create(request):
     """Create a new pre-inspection report"""
     if request.method == 'POST':
-        form = PreInspectionReportForm(request.POST)
+        form = PreInspectionReportForm(request.POST, request.FILES)
         if form.is_valid():
             report = form.save(commit=False)
             report.inspected_by = request.user
@@ -1473,7 +1495,7 @@ def pre_inspection_edit(request, pk):
     report = get_object_or_404(PreInspectionReport, pk=pk)
     
     if request.method == 'POST':
-        form = PreInspectionReportForm(request.POST, instance=report)
+        form = PreInspectionReportForm(request.POST, request.FILES, instance=report)
         if form.is_valid():
             form.save()
             
@@ -1636,11 +1658,43 @@ def post_inspection_list(request):
 def post_inspection_create(request):
     """Create a new post-inspection report"""
     if request.method == 'POST':
-        form = PostInspectionReportForm(request.POST)
+        form = PostInspectionReportForm(request.POST, request.FILES)
         if form.is_valid():
             report = form.save(commit=False)
             report.inspected_by = request.user
-            report.save()
+            
+            report.save()  # Save first to ensure we have an ID and can access vehicle
+            
+            # Handle multiple image uploads after initial save
+            uploaded_images = request.FILES.getlist('replaced_parts_images')
+            if uploaded_images:
+                try:
+                    from django.core.files.storage import default_storage
+                    import os
+                    from django.utils import timezone
+                    image_paths = []
+                    
+                    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+                    plate_number = report.vehicle.plate_number if report.vehicle else 'unknown'
+                    
+                    for idx, image in enumerate(uploaded_images):
+                        # Generate unique filename
+                        file_extension = os.path.splitext(image.name)[1] or '.jpg'
+                        unique_filename = f"post_inspection/replaced_parts/{plate_number}_{timestamp}_{idx}{file_extension}"
+                        
+                        # Save the file
+                        file_path = default_storage.save(unique_filename, image)
+                        image_paths.append(file_path)
+                    
+                    # Store paths in JSONField
+                    report.replaced_parts_images = image_paths
+                    report.save()  # Save again with images
+                except Exception as e:
+                    # Log error but don't fail the entire save
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error saving replaced parts images: {str(e)}")
+                    messages.warning(request, f'Some images could not be saved: {str(e)}')
             
             # If repair_id is provided in POST, link the report to the repair
             repair_id = request.POST.get('repair_id')
@@ -1737,9 +1791,44 @@ def post_inspection_edit(request, pk):
     report = get_object_or_404(PostInspectionReport, pk=pk)
     
     if request.method == 'POST':
-        form = PostInspectionReportForm(request.POST, instance=report)
+        form = PostInspectionReportForm(request.POST, request.FILES, instance=report)
         if form.is_valid():
-            form.save()
+            # Save form data first (without replaced_parts_images since we handle it manually)
+            report = form.save(commit=False)
+            
+            # Handle multiple image uploads - append to existing images
+            uploaded_images = request.FILES.getlist('replaced_parts_images')
+            if uploaded_images:
+                try:
+                    from django.core.files.storage import default_storage
+                    import os
+                    
+                    # Get existing images or initialize empty list
+                    existing_images = report.get_replaced_parts_images_list()
+                    
+                    from django.utils import timezone
+                    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+                    plate_number = report.vehicle.plate_number if report.vehicle else 'unknown'
+                    
+                    for idx, image in enumerate(uploaded_images):
+                        # Generate unique filename
+                        file_extension = os.path.splitext(image.name)[1] or '.jpg'
+                        unique_filename = f"post_inspection/replaced_parts/{plate_number}_{timestamp}_{len(existing_images) + idx}{file_extension}"
+                        
+                        # Save the file
+                        file_path = default_storage.save(unique_filename, image)
+                        existing_images.append(file_path)
+                    
+                    # Update the JSONField with all images
+                    report.replaced_parts_images = existing_images
+                except Exception as e:
+                    # Log error but don't fail the entire save
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error saving replaced parts images: {str(e)}")
+                    messages.warning(request, f'Some images could not be saved: {str(e)}')
+            
+            report.save()
             
             # Log activity
             ActivityLog.objects.create(
