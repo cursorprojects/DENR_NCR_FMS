@@ -49,6 +49,7 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <th>Photo</th>
                         <th>Plate No.</th>
                         <th>Brand/Model</th>
                         <th>Year</th>
@@ -64,6 +65,25 @@
                     {% for item in vehicle_data %}
                     {% with vehicle=item.vehicle is_overuse=item.is_overuse overuse_info=item.overuse_info disposal_percentage=item.disposal_percentage %}
                     <tr {% if vehicle.status == 'For Disposal' or is_overuse %}class="table-danger"{% endif %}>
+                        <td class="align-middle">
+                            <div class="vehicle-thumb-wrapper">
+                                {% if vehicle.photos %}
+                                    {% with photo=vehicle.photos.0 %}
+                                        <img src="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ photo }}{% else %}/media/{{ photo }}{% endif %}"
+                                             alt="{{ vehicle.plate_number }} photo"
+                                             class="vehicle-thumb-img"
+                                             onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('d-none');">
+                                        <div class="vehicle-thumb-placeholder d-none">
+                                            <i class="bi bi-car-front"></i>
+                                        </div>
+                                    {% endwith %}
+                                {% else %}
+                                    <div class="vehicle-thumb-placeholder">
+                                        <i class="bi bi-car-front"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </td>
                         <td>
                             <strong>{{ vehicle.plate_number }}</strong>
                             {% if vehicle.status == 'For Disposal' or is_overuse %}
@@ -151,7 +171,7 @@
                     {% endwith %}
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center">No vehicles found.</td>
+                        <td colspan="10" class="text-center">No vehicles found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -159,4 +179,27 @@
         </div>
     </div>
 </div>
+<style>
+.vehicle-thumb-wrapper {
+    width: 110px;
+    height: 70px;
+}
+
+.vehicle-thumb-img,
+.vehicle-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 0.5rem;
+    object-fit: cover;
+}
+
+.vehicle-thumb-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    font-size: 1.5rem;
+}
+</style>
 {% endblock %}

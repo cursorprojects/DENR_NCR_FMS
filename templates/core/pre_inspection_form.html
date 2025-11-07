@@ -137,13 +137,21 @@
                                     <div class="form-text">You can select multiple files (PDF, DOC, DOCX, etc.)</div>
                                     {% if form.instance.pk and form.instance.driver_report_attachments %}
                                         <div class="mt-2">
-                                            <small class="text-muted">Current attachments:</small>
-                                            <ul class="list-unstyled mt-1">
+                                            <small class="text-muted d-block mb-1">Current attachments:</small>
+                                            <ul class="list-unstyled mb-0">
                                                 {% for attachment_path in form.instance.driver_report_attachments %}
-                                                    <li>
-                                                        <a href="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ attachment_path }}{% else %}/media/{{ attachment_path }}{% endif %}" target="_blank">
-                                                            <i class="bi bi-file-earmark"></i> {{ attachment_path|truncatechars:50 }}
-                                                        </a>
+                                                    <li class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+                                                        <div class="flex-grow-1">
+                                                            <a href="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ attachment_path }}{% else %}/media/{{ attachment_path }}{% endif %}" target="_blank" class="text-decoration-none">
+                                                                <i class="bi bi-file-earmark"></i> {{ attachment_path|truncatechars:50 }}
+                                                            </a>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="remove_driver_attachments" value="{{ attachment_path }}" id="removeDriverAttachment{{ forloop.counter }}">
+                                                            <label class="form-check-label text-danger" for="removeDriverAttachment{{ forloop.counter }}">
+                                                                Delete
+                                                            </label>
+                                                        </div>
                                                     </li>
                                                 {% endfor %}
                                             </ul>

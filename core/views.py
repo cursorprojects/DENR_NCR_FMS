@@ -1927,7 +1927,21 @@ def pre_inspection_edit(request, pk):
                     report.inspected_by = request.user
             
             # Get existing attachments
-            existing_attachments = report.driver_report_attachments if report.driver_report_attachments else []
+            existing_attachments = list(report.driver_report_attachments or [])
+
+            from django.core.files.storage import default_storage
+
+            # Handle removal of existing attachments
+            attachments_to_remove = request.POST.getlist('remove_driver_attachments')
+            if attachments_to_remove:
+                for path in attachments_to_remove:
+                    if path in existing_attachments:
+                        existing_attachments.remove(path)
+                        try:
+                            if default_storage.exists(path):
+                                default_storage.delete(path)
+                        except Exception:
+                            pass
             
             # Handle multiple driver report attachments
             attachments_list = []
@@ -1938,13 +1952,12 @@ def pre_inspection_edit(request, pk):
                 attachments_list.extend([f for f in request.FILES.getlist('driver_report_attachment')])
             
             if attachments_list:
-                from django.core.files.storage import default_storage
-                attachment_paths = existing_attachments.copy()
                 for attachment in attachments_list:
                     if attachment:
                         path = default_storage.save(f'pre_inspection/driver_reports/{attachment.name}', attachment)
-                        attachment_paths.append(path)
-                report.driver_report_attachments = attachment_paths
+                        existing_attachments.append(path)
+
+            report.driver_report_attachments = existing_attachments
             
             report.save()
             
@@ -2109,28 +2122,51 @@ def post_inspection_create(request):
     repair_id = request.POST.get('repair_id') or request.GET.get('repair_id')
     pms_id = request.POST.get('pms_id') or request.GET.get('pms_id')
 
-    if request.method == 'POST':
-        form = PostInspectionReportForm(request.POST, request.FILES)
-        # Hide pre-inspection selection; it will be auto-assigned
-        form.fields['pre_inspection'].widget = forms.HiddenInput()
+    repair = None
+    pms = None
+    pre_inspection_instance = None
+    should_hide_pre_inspection = False
 
-        # Limit queryset to the linked repair or PMS pre-inspection if provided
-        if repair_id:
-            try:
-                repair = Repair.objects.get(pk=repair_id)
-                if repair.pre_inspection:
-                    form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=repair.pre_inspection.pk)
-                    form.fields['pre_inspection'].initial = repair.pre_inspection
-            except Repair.DoesNotExist:
-                pass
-        elif pms_id:
-            try:
-                pms = PMS.objects.get(pk=pms_id)
-                if pms.pre_inspection:
-                    form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=pms.pre_inspection.pk)
-                    form.fields['pre_inspection'].initial = pms.pre_inspection
-            except PMS.DoesNotExist:
-                pass
+    if repair_id:
+        try:
+            repair = Repair.objects.get(pk=repair_id)
+            pre_inspection_instance = repair.pre_inspection
+            should_hide_pre_inspection = pre_inspection_instance is not None
+        except Repair.DoesNotExist:
+            messages.error(request, 'The linked repair record could not be found.')
+    elif pms_id:
+        try:
+            pms = PMS.objects.get(pk=pms_id)
+            pre_inspection_instance = pms.pre_inspection
+            should_hide_pre_inspection = pre_inspection_instance is not None
+        except PMS.DoesNotExist:
+            messages.error(request, 'The linked PMS record could not be found.')
+
+    if request.method == 'POST':
+        post_data = request.POST.copy()
+
+        # Auto-populate fields based on linked repair/PMS when available
+        if repair and repair.vehicle and not post_data.get('vehicle'):
+            post_data['vehicle'] = str(repair.vehicle.pk)
+        if pms and pms.vehicle and not post_data.get('vehicle'):
+            post_data['vehicle'] = str(pms.vehicle.pk)
+
+        if repair and not post_data.get('report_type'):
+            post_data['report_type'] = 'repair'
+        if pms and not post_data.get('report_type'):
+            post_data['report_type'] = 'pms'
+
+        if pre_inspection_instance and not post_data.get('pre_inspection'):
+            post_data['pre_inspection'] = str(pre_inspection_instance.pk)
+
+        form = PostInspectionReportForm(post_data, request.FILES)
+
+        if should_hide_pre_inspection:
+            form.fields['pre_inspection'].widget = forms.HiddenInput()
+
+        if pre_inspection_instance:
+            form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=pre_inspection_instance.pk)
+            form.fields['pre_inspection'].initial = pre_inspection_instance
 
         if form.is_valid():
             report = form.save(commit=False)
@@ -2171,29 +2207,42 @@ def post_inspection_create(request):
                     logger.error(f"Error saving replaced parts images: {str(e)}")
                     messages.warning(request, f'Some images could not be saved: {str(e)}')
             
-            # If repair_id is provided, link the report to the repair
+            # Determine linked repair/PMS using provided IDs or the selected pre-inspection
+            linked_repair = None
+            linked_pms = None
+
             if repair_id:
                 try:
-                    repair = Repair.objects.get(pk=repair_id)
-                    repair.post_inspection = report
-                    repair.save()
+                    linked_repair = Repair.objects.get(pk=repair_id)
                 except Repair.DoesNotExist:
-                    pass
+                    linked_repair = None
+            if pms_id:
+                try:
+                    linked_pms = PMS.objects.get(pk=pms_id)
+                except PMS.DoesNotExist:
+                    linked_pms = None
+
+            # Fallback: detect associations from the selected pre-inspection
+            if not linked_repair and report.pre_inspection_id:
+                linked_repair = Repair.objects.filter(pre_inspection_id=report.pre_inspection_id).first()
+            if not linked_pms and report.pre_inspection_id:
+                linked_pms = PMS.objects.filter(pre_inspection_id=report.pre_inspection_id).first()
+
+            if linked_repair:
+                try:
+                    linked_repair.post_inspection = report
+                    linked_repair.save()
                 except Exception as e:
                     from django.core.exceptions import ValidationError
                     if isinstance(e, ValidationError):
                         messages.error(request, str(e))
                     else:
                         messages.error(request, f'Error linking post-inspection to repair: {str(e)}')
-            
-            # If pms_id is provided, link the report to the PMS
-            if pms_id:
+
+            if linked_pms:
                 try:
-                    pms = PMS.objects.get(pk=pms_id)
-                    pms.post_inspection = report
-                    pms.save()
-                except PMS.DoesNotExist:
-                    pass
+                    linked_pms.post_inspection = report
+                    linked_pms.save()
                 except Exception as e:
                     from django.core.exceptions import ValidationError
                     if isinstance(e, ValidationError):
@@ -2215,38 +2264,23 @@ def post_inspection_create(request):
             return redirect('post_inspection_detail', pk=report.pk)
     else:
         form = PostInspectionReportForm()
-        # Hide pre-inspection selection; it will be set automatically
-        form.fields['pre_inspection'].widget = forms.HiddenInput()
+
+        if should_hide_pre_inspection:
+            form.fields['pre_inspection'].widget = forms.HiddenInput()
+
         # Set default inspected_by to current user
         form.fields['inspected_by'].initial = request.user
-        
-        # Pre-populate form if repair_id is provided
-        if repair_id:
-            try:
-                repair = Repair.objects.get(pk=repair_id)
-                form.fields['vehicle'].initial = repair.vehicle
-                form.fields['report_type'].initial = 'repair'
-                form.fields['pre_inspection'].initial = repair.pre_inspection
-                if repair.pre_inspection:
-                    form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=repair.pre_inspection.pk)
-            except Repair.DoesNotExist:
-                pass
-        
-        # Pre-populate form if pms_id is provided
-        if pms_id:
-            try:
-                pms = PMS.objects.get(pk=pms_id)
-                form.fields['vehicle'].initial = pms.vehicle
-                form.fields['report_type'].initial = 'pms'
-                form.fields['pre_inspection'].initial = pms.pre_inspection
-                if pms.pre_inspection:
-                    try:
-                        form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=pms.pre_inspection.pk)
-                    except PreInspectionReport.DoesNotExist:
-                        form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(is_approved=True)
-                        form.fields['pre_inspection'].initial = None
-            except PMS.DoesNotExist:
-                pass
+
+        if repair:
+            form.fields['vehicle'].initial = repair.vehicle
+            form.fields['report_type'].initial = 'repair'
+        elif pms:
+            form.fields['vehicle'].initial = pms.vehicle
+            form.fields['report_type'].initial = 'pms'
+
+        if pre_inspection_instance:
+            form.fields['pre_inspection'].initial = pre_inspection_instance
+            form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=pre_inspection_instance.pk)
     
     return render(request, 'core/post_inspection_form.html', {
         'form': form,
@@ -2287,16 +2321,28 @@ def post_inspection_edit(request, pk):
                 if not report.inspected_by:
                     report.inspected_by = request.user
             
+            from django.core.files.storage import default_storage
+            import os
+
+            # Get existing images or initialize empty list
+            existing_images = list(report.get_replaced_parts_images_list())
+
+            # Handle removal of existing images
+            remove_images = request.POST.getlist('remove_replaced_images')
+            if remove_images:
+                for path in remove_images:
+                    if path in existing_images:
+                        existing_images.remove(path)
+                        try:
+                            if default_storage.exists(path):
+                                default_storage.delete(path)
+                        except Exception:
+                            pass
+
             # Handle multiple image uploads - append to existing images
             uploaded_images = request.FILES.getlist('replaced_parts_images')
             if uploaded_images:
                 try:
-                    from django.core.files.storage import default_storage
-                    import os
-                    
-                    # Get existing images or initialize empty list
-                    existing_images = report.get_replaced_parts_images_list()
-                    
                     from django.utils import timezone
                     timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
                     plate_number = report.vehicle.plate_number if report.vehicle else 'unknown'
@@ -2309,15 +2355,14 @@ def post_inspection_edit(request, pk):
                         # Save the file
                         file_path = default_storage.save(unique_filename, image)
                         existing_images.append(file_path)
-                    
-                    # Update the JSONField with all images
-                    report.replaced_parts_images = existing_images
                 except Exception as e:
                     # Log error but don't fail the entire save
                     import logging
                     logger = logging.getLogger(__name__)
                     logger.error(f"Error saving replaced parts images: {str(e)}")
                     messages.warning(request, f'Some images could not be saved: {str(e)}')
+
+            report.replaced_parts_images = existing_images
             
             report.save()
             
