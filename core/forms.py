@@ -162,6 +162,12 @@ class RepairForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Require all fields on repair form
+        for name, field in self.fields.items():
+            field.required = True
+            if not isinstance(field.widget, forms.widgets.HiddenInput):
+                field.widget.attrs.setdefault('required', 'required')
+
         # Only show active repair shops in the dropdown
         self.fields['repair_shop'].queryset = RepairShop.objects.filter(is_active=True)
         self.fields['repair_shop'].empty_label = "Select a repair shop..."
@@ -203,6 +209,9 @@ class RepairForm(forms.ModelForm):
         # Disable status field if repair is completed or if no post-inspection exists
         if self.instance.pk:
             if self.instance.status == 'Completed':
+                self.fields['status'].disabled = True
+                self.fields['status'].required = False
+                self.fields['status'].widget.attrs.pop('required', None)
                 self.fields['status'].widget.attrs['disabled'] = True
                 self.fields['status'].help_text = "Status cannot be changed once marked as completed. Use post-inspection workflow."
             elif self.instance.status == 'Ongoing' and not self.instance.post_inspection:
@@ -324,7 +333,7 @@ class PMSForm(forms.ModelForm):
     # Make provider a dropdown of repair shops
     repair_shop = forms.ModelChoiceField(
         queryset=RepairShop.objects.none(),  # Will be set in __init__
-        required=False,
+        required=True,
         empty_label='Select a repair shop',
         widget=forms.Select(attrs={'class': 'form-control'}),
         label='Service Provider'
@@ -355,14 +364,29 @@ class PMSForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
+        # Require PMS form fields except provider and completed_date (optional)
+        for name, field in self.fields.items():
+            if name in ('provider', 'completed_date'):
+                field.required = False
+                if not isinstance(field.widget, forms.widgets.HiddenInput):
+                    field.widget.attrs.pop('required', None)
+                continue
+            field.required = True
+            if not isinstance(field.widget, forms.widgets.HiddenInput):
+                field.widget.attrs.setdefault('required', 'required')
+
+        # Ensure provider field is not required and service type is preset
+        self.fields['provider'].required = False
+        self.fields['completed_date'].required = False
+        self.fields['service_type'].required = False
+
         # Set the queryset for repair_shop field
         self.fields['repair_shop'].queryset = RepairShop.objects.filter(is_active=True)
-        
+
         # Always set service type to 'General Inspection'
         self.fields['service_type'].initial = 'General Inspection'
-        self.fields['service_type'].required = False
-        
+
         # Filter pre-inspections to only show approved ones for PMS that are not already used
         # Exclude pre-inspections already used by other repairs or PMS (but allow if it's the current PMS)
         used_pre_inspection_ids = set()
@@ -400,19 +424,22 @@ class PMSForm(forms.ModelForm):
         
         self.fields['pre_inspection'].queryset = base_queryset.order_by('-inspection_date')
         self.fields['pre_inspection'].empty_label = "Select an approved pre-inspection report..."
-        
-        # When editing, pre_inspection is not required (it's already set)
-        # When creating, pre_inspection is required
+        self.fields['pre_inspection'].required = True
         if self.instance.pk:
-            self.fields['pre_inspection'].required = False
-            self.fields['pre_inspection'].help_text = "Optional: Select an approved pre-inspection report for PMS (can only be used once). Current pre-inspection will be used if not changed."
+            self.fields['pre_inspection'].help_text = (
+                "Required: An approved pre-inspection report is pre-selected. Choose another if needed; it can only be used once."
+            )
         else:
-            self.fields['pre_inspection'].required = True
-            self.fields['pre_inspection'].help_text = "Required: Select an approved pre-inspection report for PMS (can only be used once)"
-        
+            self.fields['pre_inspection'].help_text = (
+                "Required: Select an approved pre-inspection report for PMS (can only be used once)."
+            )
+
         # Disable status field if PMS is completed or if no post-inspection exists
         if self.instance.pk:
             if self.instance.status == 'Completed':
+                self.fields['status'].disabled = True
+                self.fields['status'].required = False
+                self.fields['status'].widget.attrs.pop('required', None)
                 self.fields['status'].widget.attrs['disabled'] = True
                 self.fields['status'].help_text = "Status cannot be changed once marked as completed. Use post-inspection workflow."
             elif self.instance.status == 'In Progress' and not self.instance.post_inspection:

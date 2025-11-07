@@ -7,7 +7,8 @@ from django.core.exceptions import ValidationError
 from django import forms
 import json
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db.models import Sum, Count, Q, F
+from django.db.models import Sum, Count, Q, F, Value, DecimalField
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.http import JsonResponse, HttpResponse
@@ -329,6 +330,35 @@ def vehicle_edit(request, pk):
             existing_photos = vehicle.photos if vehicle.photos else []
             existing_documents = vehicle.registration_documents if vehicle.registration_documents else []
             
+            from django.core.files.storage import default_storage
+
+            photo_paths = existing_photos.copy()
+            document_paths = existing_documents.copy()
+
+            # Handle removal of existing photos
+            remove_photos = request.POST.getlist('remove_photos')
+            if remove_photos:
+                for path in remove_photos:
+                    if path in photo_paths:
+                        photo_paths.remove(path)
+                        try:
+                            if default_storage.exists(path):
+                                default_storage.delete(path)
+                        except Exception:
+                            pass
+
+            # Handle removal of existing documents
+            remove_documents = request.POST.getlist('remove_documents')
+            if remove_documents:
+                for path in remove_documents:
+                    if path in document_paths:
+                        document_paths.remove(path)
+                        try:
+                            if default_storage.exists(path):
+                                default_storage.delete(path)
+                        except Exception:
+                            pass
+
             # Handle multiple photos
             photos_list = []
             if 'photos' in request.FILES:
@@ -336,16 +366,13 @@ def vehicle_edit(request, pk):
             # Also check for legacy 'photo' field
             if 'photo' in request.FILES:
                 photos_list.extend([f for f in request.FILES.getlist('photo')])
-            
+
             if photos_list:
-                from django.core.files.storage import default_storage
-                photo_paths = existing_photos.copy()
                 for photo in photos_list:
                     if photo:
                         path = default_storage.save(f'vehicles/photos/{photo.name}', photo)
                         photo_paths.append(path)
-                vehicle.photos = photo_paths
-            
+
             # Handle multiple registration documents
             documents_list = []
             if 'registration_documents' in request.FILES:
@@ -353,16 +380,16 @@ def vehicle_edit(request, pk):
             # Also check for legacy 'registration_document' field
             if 'registration_document' in request.FILES:
                 documents_list.extend([f for f in request.FILES.getlist('registration_document')])
-            
+
             if documents_list:
-                from django.core.files.storage import default_storage
-                doc_paths = existing_documents.copy()
                 for doc in documents_list:
                     if doc:
                         path = default_storage.save(f'documents/registration/{doc.name}', doc)
-                        doc_paths.append(path)
-                vehicle.registration_documents = doc_paths
-            
+                        document_paths.append(path)
+
+            vehicle.photos = photo_paths
+            vehicle.registration_documents = document_paths
+
             vehicle.save()
             messages.success(request, 'Vehicle updated successfully!')
             return redirect('vehicle_detail', pk=pk)
@@ -547,15 +574,23 @@ def operational_status(request):
 def reports(request):
     # Monthly repair costs
     monthly_report = []
+    current_year = timezone.now().year
     for month in range(1, 13):
-        cost = Repair.objects.filter(
+        monthly_total = Repair.objects.filter(
             date_of_repair__month=month,
-            date_of_repair__year=timezone.now().year,
+            date_of_repair__year=current_year,
             status='Completed'
-        ).aggregate(total=Sum('cost'))['total'] or 0
+        ).aggregate(
+            total=Sum(
+                F('cost') + Coalesce(
+                    F('labor_cost'),
+                    Value(0, output_field=DecimalField(max_digits=10, decimal_places=2))
+                )
+            )
+        )['total'] or 0
         monthly_report.append({
-            'month': datetime(2024, month, 1).strftime('%B'),
-            'cost': cost
+            'month': datetime(current_year, month, 1).strftime('%B'),
+            'cost': monthly_total
         })
     
     # Repair costs by vehicle
@@ -1492,7 +1527,13 @@ def pms_create(request):
             except Vehicle.DoesNotExist:
                 pass
     
-    return render(request, 'core/pms_form.html', {'form': form, 'formset': formset, 'title': 'Add PMS Record'})
+    return render(request, 'core/pms_form.html', {
+        'form': form,
+        'formset': formset,
+        'title': 'Add PMS Record',
+        'pms': form.instance,
+        'repair': None,
+    })
 
 
 @login_required
@@ -2065,14 +2106,38 @@ def post_inspection_list(request):
 @login_required
 def post_inspection_create(request):
     """Create a new post-inspection report"""
+    repair_id = request.POST.get('repair_id') or request.GET.get('repair_id')
+    pms_id = request.POST.get('pms_id') or request.GET.get('pms_id')
+
     if request.method == 'POST':
         form = PostInspectionReportForm(request.POST, request.FILES)
+        # Hide pre-inspection selection; it will be auto-assigned
+        form.fields['pre_inspection'].widget = forms.HiddenInput()
+
+        # Limit queryset to the linked repair or PMS pre-inspection if provided
+        if repair_id:
+            try:
+                repair = Repair.objects.get(pk=repair_id)
+                if repair.pre_inspection:
+                    form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=repair.pre_inspection.pk)
+                    form.fields['pre_inspection'].initial = repair.pre_inspection
+            except Repair.DoesNotExist:
+                pass
+        elif pms_id:
+            try:
+                pms = PMS.objects.get(pk=pms_id)
+                if pms.pre_inspection:
+                    form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=pms.pre_inspection.pk)
+                    form.fields['pre_inspection'].initial = pms.pre_inspection
+            except PMS.DoesNotExist:
+                pass
+
         if form.is_valid():
             report = form.save(commit=False)
             # Always set inspected_by to current user (or use form value if provided)
             if not report.inspected_by:
                 report.inspected_by = request.user
-            
+
             report.save()  # Save first to ensure we have an ID and can access vehicle
             
             # Handle multiple image uploads after initial save
@@ -2106,8 +2171,7 @@ def post_inspection_create(request):
                     logger.error(f"Error saving replaced parts images: {str(e)}")
                     messages.warning(request, f'Some images could not be saved: {str(e)}')
             
-            # If repair_id is provided in POST, link the report to the repair
-            repair_id = request.POST.get('repair_id')
+            # If repair_id is provided, link the report to the repair
             if repair_id:
                 try:
                     repair = Repair.objects.get(pk=repair_id)
@@ -2116,15 +2180,13 @@ def post_inspection_create(request):
                 except Repair.DoesNotExist:
                     pass
                 except Exception as e:
-                    # Handle validation errors gracefully
                     from django.core.exceptions import ValidationError
                     if isinstance(e, ValidationError):
                         messages.error(request, str(e))
                     else:
                         messages.error(request, f'Error linking post-inspection to repair: {str(e)}')
             
-            # If pms_id is provided in POST, link the report to the PMS
-            pms_id = request.POST.get('pms_id')
+            # If pms_id is provided, link the report to the PMS
             if pms_id:
                 try:
                     pms = PMS.objects.get(pk=pms_id)
@@ -2133,7 +2195,6 @@ def post_inspection_create(request):
                 except PMS.DoesNotExist:
                     pass
                 except Exception as e:
-                    # Handle validation errors gracefully
                     from django.core.exceptions import ValidationError
                     if isinstance(e, ValidationError):
                         messages.error(request, str(e))
@@ -2154,43 +2215,45 @@ def post_inspection_create(request):
             return redirect('post_inspection_detail', pk=report.pk)
     else:
         form = PostInspectionReportForm()
+        # Hide pre-inspection selection; it will be set automatically
+        form.fields['pre_inspection'].widget = forms.HiddenInput()
         # Set default inspected_by to current user
         form.fields['inspected_by'].initial = request.user
         
         # Pre-populate form if repair_id is provided
-        repair_id = request.GET.get('repair_id')
         if repair_id:
             try:
                 repair = Repair.objects.get(pk=repair_id)
                 form.fields['vehicle'].initial = repair.vehicle
                 form.fields['report_type'].initial = 'repair'
                 form.fields['pre_inspection'].initial = repair.pre_inspection
-                # Filter pre-inspection to only show the repair's pre-inspection
                 if repair.pre_inspection:
                     form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=repair.pre_inspection.pk)
             except Repair.DoesNotExist:
                 pass
         
         # Pre-populate form if pms_id is provided
-        pms_id = request.GET.get('pms_id')
         if pms_id:
             try:
                 pms = PMS.objects.get(pk=pms_id)
                 form.fields['vehicle'].initial = pms.vehicle
                 form.fields['report_type'].initial = 'pms'
                 form.fields['pre_inspection'].initial = pms.pre_inspection
-                # Filter pre-inspection to only show the PMS's pre-inspection
                 if pms.pre_inspection:
                     try:
                         form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(pk=pms.pre_inspection.pk)
                     except PreInspectionReport.DoesNotExist:
-                        # Pre-inspection was deleted, allow selecting any approved pre-inspection
                         form.fields['pre_inspection'].queryset = PreInspectionReport.objects.filter(is_approved=True)
                         form.fields['pre_inspection'].initial = None
             except PMS.DoesNotExist:
                 pass
     
-    return render(request, 'core/post_inspection_form.html', {'form': form, 'title': 'Create Post-Inspection Report'})
+    return render(request, 'core/post_inspection_form.html', {
+        'form': form,
+        'title': 'Create Post-Inspection Report',
+        'repair_id': repair_id,
+        'pms_id': pms_id,
+    })
 
 
 @login_required

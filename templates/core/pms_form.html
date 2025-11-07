@@ -83,7 +83,7 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Completed Date</label>
+                                <label class="form-label">Completed Date <small class="text-muted">(optional)</small></label>
                                 {{ form.completed_date }}
                                 {% if form.completed_date.errors %}
                                     <div class="text-danger">{{ form.completed_date.errors }}</div>

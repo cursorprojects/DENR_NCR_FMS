@@ -137,13 +137,17 @@
                             <div class="form-text">You can select multiple photos</div>
                             {% if vehicle and vehicle.photos %}
                                 <div class="mt-2">
-                                    <small class="text-muted">Current photos:</small>
+                                    <small class="text-muted">Current photos (check to remove):</small>
                                     <ul class="list-unstyled mt-1">
                                         {% for photo_path in vehicle.photos %}
-                                            <li>
+                                            <li class="d-flex align-items-center justify-content-between gap-2">
                                                 <a href="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ photo_path }}{% else %}/media/{{ photo_path }}{% endif %}" target="_blank">
                                                     <i class="bi bi-image"></i> {{ photo_path|truncatechars:50 }}
                                                 </a>
+                                                <div class="form-check mb-0">
+                                                    <input class="form-check-input" type="checkbox" name="remove_photos" value="{{ photo_path }}" id="remove_photo_{{ forloop.counter }}">
+                                                    <label class="form-check-label text-danger small" for="remove_photo_{{ forloop.counter }}">Remove</label>
+                                                </div>
                                             </li>
                                         {% endfor %}
                                     </ul>
@@ -156,13 +160,17 @@
                             <div class="form-text">You can select multiple documents (PDF, DOC, etc.)</div>
                             {% if vehicle and vehicle.registration_documents %}
                                 <div class="mt-2">
-                                    <small class="text-muted">Current documents:</small>
+                                    <small class="text-muted">Current documents (check to remove):</small>
                                     <ul class="list-unstyled mt-1">
                                         {% for doc_path in vehicle.registration_documents %}
-                                            <li>
+                                            <li class="d-flex align-items-center justify-content-between gap-2">
                                                 <a href="{% if MEDIA_URL %}{{ MEDIA_URL }}{{ doc_path }}{% else %}/media/{{ doc_path }}{% endif %}" target="_blank">
                                                     <i class="bi bi-file-earmark"></i> {{ doc_path|truncatechars:50 }}
                                                 </a>
+                                                <div class="form-check mb-0">
+                                                    <input class="form-check-input" type="checkbox" name="remove_documents" value="{{ doc_path }}" id="remove_document_{{ forloop.counter }}">
+                                                    <label class="form-check-label text-danger small" for="remove_document_{{ forloop.counter }}">Remove</label>
+                                                </div>
                                             </li>
                                         {% endfor %}
                                     </ul>
