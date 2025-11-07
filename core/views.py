@@ -369,7 +369,11 @@ def vehicle_edit(request, pk):
     else:
         form = VehicleForm(instance=vehicle)
     
-    return render(request, 'core/vehicle_form.html', {'form': form, 'title': 'Edit Vehicle'})
+    return render(request, 'core/vehicle_form.html', {
+        'form': form,
+        'title': 'Edit Vehicle',
+        'vehicle': vehicle,
+    })
 
 
 @login_required
